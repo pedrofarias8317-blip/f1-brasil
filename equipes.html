@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Equipes · F1 Brasil</title>
+<link rel="stylesheet" href="estilo.css">
+<script src="menu.js"></script>
+</head>
+<body>
+<main>
+<h1>Equipes</h1>
+<p class="sub" id="sub">Carregando...</p>
+<div class="list" id="lista"></div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+(async()=>{
+ try{
+  const [e,p]=await Promise.all([lerDados("equipes.json"),lerDados("pilotos.json")]);
+  const s=e.MRData.StandingsTable.StandingsLists[0];
+  const pil=p.MRData.StandingsTable.StandingsLists[0].DriverStandings;
+  $("sub").textContent="Temporada "+s.season+" · após a rodada "+s.round;
+  $("lista").innerHTML=s.ConstructorStandings.map(t=>{
+   const nomes=pil.filter(d=>d.Constructors.some(c=>c.constructorId===t.Constructor.constructorId)).map(d=>d.Driver.familyName).join(" · ");
+   return '<div class="row" style="--cor:'+corEquipe(t.Constructor.name)+'"><span class="pos">'+t.position+'</span><span><b>'+t.Constructor.name+'</b><small>'+(nomes?nomes+" · ":"")+t.wins+' vitória(s)</small></span><span class="pts">'+t.points+'</span></div>';
+  }).join("");
+ }catch(e){$("sub").textContent="Não consegui carregar os dados: "+e.message}
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pilotos · F1 Brasil</title>
+<link rel="stylesheet" href="estilo.css">
+<script src="menu.js"></script>
+</head>
+<body>
+<main>
+<h1>Pilotos</h1>
+<p class="sub" id="sub">Carregando...</p>
+<div class="list" id="lista"></div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+(async()=>{
+ try{
+  const p=await lerDados("pilotos.json");
+  const s=p.MRData.StandingsTable.StandingsLists[0];
+  $("sub").textContent="Temporada "+s.season+" · após a rodada "+s.round;
+  $("lista").innerHTML=s.DriverStandings.map(d=>'<div class="row" style="--cor:'+corEquipe(d.Constructors[0]&&d.Constructors[0].name)+'"><span class="pos">'+d.position+'</span><span><b>'+d.Driver.givenName+' '+d.Driver.familyName+'</b><small>'+d.Constructors.map(x=>x.name).join(" / ")+' · '+(NAC[d.Driver.nationality]||d.Driver.nationality)+' · '+d.wins+' vitória(s)</small></span><span class="pts">'+d.points+'</span></div>').join("");
+ }catch(e){$("sub").textContent="Não consegui carregar os dados: "+e.message}
+})();
+</script>
+</body>
+</html>

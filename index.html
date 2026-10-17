@@ -4,63 +4,47 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>F1 Brasil</title>
-<style>
-:root{--bg:#f4f4f6;--panel:#fff;--ink:#15151e;--mute:#6b6b7b;--line:#dcdce4;--red:#e10600}
-@media (prefers-color-scheme:dark){:root{--bg:#0c0c10;--panel:#16161d;--ink:#f2f2f6;--mute:#9a9aad;--line:#2a2a36}}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,sans-serif;line-height:1.5}
-main{max-width:760px;margin:0 auto;padding:18px 14px 48px}
-.tag{background:var(--red);color:#fff;font-weight:800;font-size:.72rem;padding:3px 9px;border-radius:4px}
-h1{font-size:2rem;margin:8px 0 4px}
-.sub{color:var(--mute);margin:0 0 16px}
-.tabs{display:flex;gap:8px;margin-bottom:12px}
-button{font:inherit;cursor:pointer;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:7px 16px;font-weight:600}
-button.on{background:var(--red);border-color:var(--red);color:#fff}
-.list{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
-.row{display:grid;grid-template-columns:30px 1fr auto;gap:10px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line)}
-.row:last-child{border-bottom:0}
-.pos{font-weight:800;color:var(--mute)}
-.row small{display:block;color:var(--mute);font-size:.78rem}
-.pts{font-weight:800;text-align:right}
-.passou{opacity:.55}
-</style>
+<link rel="stylesheet" href="estilo.css">
+<script src="menu.js"></script>
 </head>
 <body>
 <main>
-<span class="tag">F1</span>
-<h1>F1 Brasil</h1>
-<p class="sub" id="sub">Carregando...</p>
-<p><a href="corridas.html">Resultados das corridas →</a> · <a href="campeoes.html">Campeões →</a></p><div class="tabs">
- <button class="on" data-v="pilotos">Pilotos</button>
- <button data-v="equipes">Equipes</button>
- <button data-v="calendario">Calendário</button>
+<div class="hero" id="hero"><small>Próximo Grande Prêmio</small><h1>Carregando...</h1></div>
+<div class="duas">
+ <div><h2>Pilotos</h2><div class="list" id="tp"></div><a class="mais" href="pilotos.html">Ver todos →</a></div>
+ <div><h2>Equipes</h2><div class="list" id="te"></div><a class="mais" href="equipes.html">Ver todas →</a></div>
 </div>
-<div class="list" id="lista"></div>
+<h2 id="ut">Último resultado</h2>
+<div class="list" id="ult"></div>
+<a class="mais" href="corridas.html">Todos os resultados →</a>
 </main>
 <script>
-const NAC={British:"Reino Unido",Dutch:"Países Baixos",Italian:"Itália",Monegasque:"Mônaco",Australian:"Austrália",French:"França","New Zealander":"Nova Zelândia",Argentine:"Argentina",German:"Alemanha",Brazilian:"Brasil",Spanish:"Espanha",Thai:"Tailândia",Japanese:"Japão",Canadian:"Canadá",Finnish:"Finlândia",Mexican:"México"};
 const $=id=>document.getElementById(id);
-const ler=async n=>(await fetch("dados/"+n)).json();
-const dados={};
-function mostrar(v){
- document.querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
- $("lista").innerHTML=dados[v];
+const GP=n=>"GP de "+n.replace(" Grand Prix","");
+function contagem(prox){
+  const alvo=new Date(prox.date+"T"+(prox.time||"12:00:00Z"));
+  const ms=alvo-new Date();
+  const d=Math.max(0,Math.floor(ms/864e5)),h=Math.max(0,Math.floor(ms%864e5/36e5)),m=Math.max(0,Math.floor(ms%36e5/6e4));
+  $("hero").innerHTML='<small>Próximo Grande Prêmio · rodada '+prox.round+'</small><h1>'+GP(prox.raceName)+'</h1><p>'+prox.Circuit.circuitName+' · '+prox.Circuit.Location.locality+', '+prox.Circuit.Location.country+'</p><p>'+alvo.toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"long"})+' às '+alvo.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})+' (no seu horário)</p><div class="cont"><div><b>'+d+'</b><span>dias</span></div><div><b>'+h+'</b><span>horas</span></div><div><b>'+m+'</b><span>min</span></div></div>';
 }
 (async()=>{
  try{
-  const [p,e,c]=await Promise.all([ler("pilotos.json"),ler("equipes.json"),ler("calendario.json")]);
-  const sp=p.MRData.StandingsTable.StandingsLists[0];
-  const se=e.MRData.StandingsTable.StandingsLists[0];
+  const [p,e,c,r]=await Promise.all([lerDados("pilotos.json"),lerDados("equipes.json"),lerDados("calendario.json"),lerDados("resultados.json")]);
+  const sp=p.MRData.StandingsTable.StandingsLists[0],se=e.MRData.StandingsTable.StandingsLists[0];
   const corridas=c.MRData.RaceTable.Races;
-  $("sub").textContent="Temporada "+sp.season+" · após a rodada "+sp.round;
-  dados.pilotos=sp.DriverStandings.map(d=>`<div class="row"><span class="pos">${d.position}</span><span><b>${d.Driver.givenName} ${d.Driver.familyName}</b><small>${d.Constructors.map(x=>x.name).join(" / ")} · ${NAC[d.Driver.nationality]||d.Driver.nationality} · ${d.wins} vitória(s)</small></span><span class="pts">${d.points}</span></div>`).join("");
-  dados.equipes=se.ConstructorStandings.map(t=>`<div class="row"><span class="pos">${t.position}</span><span><b>${t.Constructor.name}</b><small>${t.wins} vitória(s)</small></span><span class="pts">${t.points}</span></div>`).join("");
-  const hoje=new Date().toISOString().slice(0,10);
-  dados.calendario=corridas.map(r=>`<div class="row${r.date<hoje?" passou":""}"><span class="pos">${r.round}</span><span><b>${r.raceName.replace(" Grand Prix"," GP")}</b><small>${r.Circuit.circuitName} · ${r.Circuit.Location.locality}, ${r.Circuit.Location.country}</small></span><span class="pts">${new Date(r.date+"T12:00:00").toLocaleDateString("pt-BR",{day:"2-digit",month:"short"})}</span></div>`).join("");
-  mostrar("pilotos");
- }catch(err){$("sub").textContent="Não consegui carregar os dados: "+err.message}
+  const prox=corridas.find(x=>new Date(x.date+"T"+(x.time||"12:00:00Z"))>new Date());
+  if(prox){contagem(prox);setInterval(()=>contagem(prox),60000)}
+  else $("hero").innerHTML='<small>Temporada '+sp.season+'</small><h1>Temporada encerrada</h1><p>Veja a classificação final abaixo.</p>';
+  $("tp").innerHTML=sp.DriverStandings.slice(0,5).map(d=>'<div class="row" style="--cor:'+corEquipe(d.Constructors[0]&&d.Constructors[0].name)+'"><span class="pos">'+d.position+'</span><span><b>'+d.Driver.givenName+' '+d.Driver.familyName+'</b><small>'+d.Constructors.map(x=>x.name).join(" / ")+'</small></span><span class="pts">'+d.points+'</span></div>').join("");
+  $("te").innerHTML=se.ConstructorStandings.slice(0,5).map(t=>'<div class="row" style="--cor:'+corEquipe(t.Constructor.name)+'"><span class="pos">'+t.position+'</span><span><b>'+t.Constructor.name+'</b><small>'+t.wins+' vitória(s)</small></span><span class="pts">'+t.points+'</span></div>').join("");
+  const rod=Object.keys(r).sort((a,b)=>a-b);
+  if(rod.length){
+   const u=r[rod[rod.length-1]];
+   $("ut").textContent="Último resultado · "+GP(u.raceName);
+   $("ult").innerHTML=u.Results.slice(0,5).map(x=>'<div class="row" style="--cor:'+corEquipe(x.Constructor.name)+'"><span class="pos">'+x.position+'</span><span><b>'+x.Driver.givenName+' '+x.Driver.familyName+'</b><small>'+x.Constructor.name+'</small></span><span class="pts">'+(x.Time?x.Time.time:x.status)+'</span></div>').join("");
+  }
+ }catch(err){$("hero").innerHTML='<h1>Erro</h1><p>Não consegui carregar os dados: '+err.message+'</p>'}
 })();
-document.querySelectorAll("button").forEach(b=>b.onclick=()=>mostrar(b.dataset.v));
 </script>
 </body>
 </html>

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calendário · F1 Brasil</title>
+<link rel="stylesheet" href="estilo.css">
+<script src="menu.js"></script>
+</head>
+<body>
+<main>
+<h1>Calendário</h1>
+<p class="sub" id="sub">Carregando...</p>
+<div class="list" id="lista"></div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+(async()=>{
+ try{
+  const c=await lerDados("calendario.json");
+  const corridas=c.MRData.RaceTable.Races;
+  const hoje=new Date().toISOString().slice(0,10);
+  $("sub").textContent="Temporada "+c.MRData.RaceTable.season+" · "+corridas.length+" corridas";
+  $("lista").innerHTML=corridas.map(r=>'<div class="row'+(r.date<hoje?' passou':'')+'"><span class="pos">'+r.round+'</span><span><b>GP de '+r.raceName.replace(" Grand Prix","")+'</b><small>'+r.Circuit.circuitName+' · '+r.Circuit.Location.locality+', '+r.Circuit.Location.country+'</small></span><span class="pts">'+new Date(r.date+"T12:00:00").toLocaleDateString("pt-BR",{day:"2-digit",month:"short"})+'</span></div>').join("");
+ }catch(e){$("sub").textContent="Não consegui carregar os dados: "+e.message}
+})();
+</script>
+</body>
+</html>
