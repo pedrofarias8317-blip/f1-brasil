@@ -25,3 +25,21 @@ for nome, caminho in PEDIDOS.items():
     (PASTA / nome).write_text(json.dumps(dados, ensure_ascii=False, indent=2), encoding="utf-8")
     print("ok:", nome)
     time.sleep(1)
+
+from datetime import date
+
+calendario = json.loads((PASTA / "calendario.json").read_text(encoding="utf-8"))
+hoje = date.today().isoformat()
+resultados = {}
+for corrida in calendario["MRData"]["RaceTable"]["Races"]:
+    if corrida["date"] > hoje:
+        continue
+    rodada = corrida["round"]
+    dados = buscar("/current/" + rodada + "/results.json")
+    lista = dados["MRData"]["RaceTable"]["Races"]
+    if lista:
+        resultados[rodada] = lista[0]
+        print("ok: rodada", rodada)
+    time.sleep(1)
+
+(PASTA / "resultados.json").write_text(json.dumps(resultados, ensure_ascii=False, indent=2), encoding="utf-8")
