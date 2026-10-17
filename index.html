@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>F1 Brasil</title>
+<style>
+:root{--bg:#f4f4f6;--panel:#fff;--ink:#15151e;--mute:#6b6b7b;--line:#dcdce4;--red:#e10600}
+@media (prefers-color-scheme:dark){:root{--bg:#0c0c10;--panel:#16161d;--ink:#f2f2f6;--mute:#9a9aad;--line:#2a2a36}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,sans-serif;line-height:1.5}
+main{max-width:760px;margin:0 auto;padding:18px 14px 48px}
+.tag{background:var(--red);color:#fff;font-weight:800;font-size:.72rem;padding:3px 9px;border-radius:4px}
+h1{font-size:2rem;margin:8px 0 4px}
+.sub{color:var(--mute);margin:0 0 16px}
+.tabs{display:flex;gap:8px;margin-bottom:12px}
+button{font:inherit;cursor:pointer;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:7px 16px;font-weight:600}
+button.on{background:var(--red);border-color:var(--red);color:#fff}
+.list{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.row{display:grid;grid-template-columns:30px 1fr auto;gap:10px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}
+.pos{font-weight:800;color:var(--mute)}
+.row small{display:block;color:var(--mute);font-size:.78rem}
+.pts{font-weight:800;text-align:right}
+.passou{opacity:.55}
+</style>
+</head>
+<body>
+<main>
+<span class="tag">F1</span>
+<h1>F1 Brasil</h1>
+<p class="sub" id="sub">Carregando...</p>
+<div class="tabs">
+ <button class="on" data-v="pilotos">Pilotos</button>
+ <button data-v="equipes">Equipes</button>
+ <button data-v="calendario">Calendário</button>
+</div>
+<div class="list" id="lista"></div>
+</main>
+<script>
+const NAC={British:"Reino Unido",Dutch:"Países Baixos",Italian:"Itália",Monegasque:"Mônaco",Australian:"Austrália",French:"França","New Zealander":"Nova Zelândia",Argentine:"Argentina",German:"Alemanha",Brazilian:"Brasil",Spanish:"Espanha",Thai:"Tailândia",Japanese:"Japão",Canadian:"Canadá",Finnish:"Finlândia",Mexican:"México"};
+const $=id=>document.getElementById(id);
+const ler=async n=>(await fetch("dados/"+n)).json();
+const dados={};
+function mostrar(v){
+ document.querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
+ $("lista").innerHTML=dados[v];
+}
+(async()=>{
+ try{
+  const [p,e,c]=await Promise.all([ler("pilotos.json"),ler("equipes.json"),ler("calendario.json")]);
+  const sp=p.MRData.StandingsTable.StandingsLists[0];
+  const se=e.MRData.StandingsTable.StandingsLists[0];
+  const corridas=c.MRData.RaceTable.Races;
+  $("sub").textContent="Temporada "+sp.season+" · após a rodada "+sp.round;
+  dados.pilotos=sp.DriverStandings.map(d=>`<div class="row"><span class="pos">${d.position}</span><span><b>${d.Driver.givenName} ${d.Driver.familyName}</b><small>${d.Constructors.map(x=>x.name).join(" / ")} · ${NAC[d.Driver.nationality]||d.Driver.nationality} · ${d.wins} vitória(s)</small></span><span class="pts">${d.points}</span></div>`).join("");
+  dados.equipes=se.ConstructorStandings.map(t=>`<div class="row"><span class="pos">${t.position}</span><span><b>${t.Constructor.name}</b><small>${t.wins} vitória(s)</small></span><span class="pts">${t.points}</span></div>`).join("");
+  const hoje=new Date().toISOString().slice(0,10);
+  dados.calendario=corridas.map(r=>`<div class="row${r.date<hoje?" passou":""}"><span class="pos">${r.round}</span><span><b>${r.raceName.replace(" Grand Prix"," GP")}</b><small>${r.Circuit.circuitName} · ${r.Circuit.Location.locality}, ${r.Circuit.Location.country}</small></span><span class="pts">${new Date(r.date+"T12:00:00").toLocaleDateString("pt-BR",{day:"2-digit",month:"short"})}</span></div>`).join("");
+  mostrar("pilotos");
+ }catch(err){$("sub").textContent="Não consegui carregar os dados: "+err.message}
+})();
+document.querySelectorAll("button").forEach(b=>b.onclick=()=>mostrar(b.dataset.v));
+</script>
+</body>
+</html>
