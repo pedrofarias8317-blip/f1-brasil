@@ -11,16 +11,24 @@
 <main>
 <h1>Pilotos</h1>
 <p class="sub" id="sub">Carregando...</p>
+<select id="ano" aria-label="Escolher temporada"></select>
 <div class="list" id="lista"></div>
 </main>
 <script>
 const $=id=>document.getElementById(id);
+let T={};
+function mostrar(a){
+ const t=T[a];
+ $("sub").textContent="Classificação de pilotos de "+a+" · após a rodada "+t.rodada;
+ $("lista").innerHTML=t.pilotos.map(d=>'<div class="row" style="--cor:'+corEquipe(d[2].split(" / ")[0])+'"><span class="pos">'+d[0]+'</span><span><b>'+d[1]+'</b><small>'+d[2]+' · '+(NAC[d[5]]||d[5])+' · '+d[4]+' vitória(s)</small></span><span class="pts">'+d[3]+'</span></div>').join("");
+}
 (async()=>{
  try{
-  const p=await lerDados("pilotos.json");
-  const s=p.MRData.StandingsTable.StandingsLists[0];
-  $("sub").textContent="Temporada "+s.season+" · após a rodada "+s.round;
-  $("lista").innerHTML=s.DriverStandings.map(d=>'<div class="row" style="--cor:'+corEquipe(d.Constructors[0]&&d.Constructors[0].name)+'"><span class="pos">'+d.position+'</span><span><b>'+d.Driver.givenName+' '+d.Driver.familyName+'</b><small>'+d.Constructors.map(x=>x.name).join(" / ")+' · '+(NAC[d.Driver.nationality]||d.Driver.nationality)+' · '+d.wins+' vitória(s)</small></span><span class="pts">'+d.points+'</span></div>').join("");
+  T=await lerDados("temporadas.json");
+  const anos=Object.keys(T).sort((a,b)=>b-a);
+  $("ano").innerHTML=anos.map(a=>'<option value="'+a+'">Temporada '+a+'</option>').join("");
+  $("ano").onchange=e=>mostrar(e.target.value);
+  mostrar(anos[0]);
  }catch(e){$("sub").textContent="Não consegui carregar os dados: "+e.message}
 })();
 </script>

@@ -1,5 +1,6 @@
 import json
 import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -15,9 +16,19 @@ PEDIDOS = {
 
 
 def buscar(caminho):
-    req = urllib.request.Request(BASE + caminho, headers={"User-Agent": "f1-brasil"})
-    with urllib.request.urlopen(req, timeout=30) as resposta:
-        return json.load(resposta)
+    for tentativa in range(8):
+        req = urllib.request.Request(BASE + caminho, headers={"User-Agent": "f1-brasil"})
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resposta:
+                return json.load(resposta)
+        except urllib.error.HTTPError as erro:
+            if erro.code == 429:
+                espera = 90 * (tentativa + 1)
+                print("limite atingido, esperando", espera, "segundos...")
+                time.sleep(espera)
+                continue
+            raise
+    raise RuntimeError("muitas tentativas")
 
 
 for nome, caminho in PEDIDOS.items():
@@ -64,3 +75,32 @@ for ano in range(1950, ano_atual + 1):
     time.sleep(1)
 saida = {"MRData": {"StandingsTable": {"StandingsLists": [anos[k] for k in sorted(anos)]}}}
 arq.write_text(json.dumps(saida, ensure_ascii=False, indent=1), encoding="utf-8")
+
+arq2 = PASTA / "temporadas.json"
+temporadas = json.loads(arq2.read_text(encoding="utf-8")) if arq2.exists() else {}
+for ano in range(1950, ano_atual + 1):
+    chave = str(ano)
+    if chave in temporadas and ano != ano_atual:
+        continue
+    pil = buscar("/" + chave + "/driverstandings.json?limit=100")
+    listas = pil["MRData"]["StandingsTable"]["StandingsLists"]
+    if not listas:
+        continue
+    time.sleep(1)
+    eq = buscar("/" + chave + "/constructorstandings.json?limit=100")
+    listas_eq = eq["MRData"]["StandingsTable"]["StandingsLists"]
+    temporadas[chave] = {
+        "rodada": listas[0]["round"],
+        "pilotos": [
+            [d.get("position") or str(i + 1), d["Driver"]["givenName"] + " " + d["Driver"]["familyName"], " / ".join(c["name"] for c in d["Constructors"]), d["points"], d["wins"], d["Driver"].get("nationality", "")]
+            for i, d in enumerate(listas[0]["DriverStandings"])
+        ],
+        "equipes": [
+            [t.get("position") or str(i + 1), t["Constructor"]["name"], t["points"], t["wins"]]
+            for i, t in enumerate(listas_eq[0]["ConstructorStandings"])
+        ] if listas_eq else [],
+    }
+    print("ok: temporada", chave)
+    arq2.write_text(json.dumps(temporadas, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    time.sleep(1.5)
+arq2.write_text(json.dumps(temporadas, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")

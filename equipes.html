@@ -11,20 +11,28 @@
 <main>
 <h1>Equipes</h1>
 <p class="sub" id="sub">Carregando...</p>
+<select id="ano" aria-label="Escolher temporada"></select>
 <div class="list" id="lista"></div>
 </main>
 <script>
 const $=id=>document.getElementById(id);
+let T={};
+function mostrar(a){
+ const t=T[a];
+ if(!t.equipes.length){$("sub").textContent="A classificação de equipes só existe a partir de 1958.";$("lista").innerHTML="";return}
+ $("sub").textContent="Classificação de equipes de "+a+" · após a rodada "+t.rodada;
+ $("lista").innerHTML=t.equipes.map(e=>{
+  const nomes=t.pilotos.filter(d=>d[2].split(" / ").includes(e[1])).map(d=>d[1].split(" ").slice(-1)[0]).join(" · ");
+  return '<div class="row" style="--cor:'+corEquipe(e[1])+'"><span class="pos">'+e[0]+'</span><span><b>'+e[1]+'</b><small>'+(nomes?nomes+" · ":"")+e[3]+' vitória(s)</small></span><span class="pts">'+e[2]+'</span></div>';
+ }).join("");
+}
 (async()=>{
  try{
-  const [e,p]=await Promise.all([lerDados("equipes.json"),lerDados("pilotos.json")]);
-  const s=e.MRData.StandingsTable.StandingsLists[0];
-  const pil=p.MRData.StandingsTable.StandingsLists[0].DriverStandings;
-  $("sub").textContent="Temporada "+s.season+" · após a rodada "+s.round;
-  $("lista").innerHTML=s.ConstructorStandings.map(t=>{
-   const nomes=pil.filter(d=>d.Constructors.some(c=>c.constructorId===t.Constructor.constructorId)).map(d=>d.Driver.familyName).join(" · ");
-   return '<div class="row" style="--cor:'+corEquipe(t.Constructor.name)+'"><span class="pos">'+t.position+'</span><span><b>'+t.Constructor.name+'</b><small>'+(nomes?nomes+" · ":"")+t.wins+' vitória(s)</small></span><span class="pts">'+t.points+'</span></div>';
-  }).join("");
+  T=await lerDados("temporadas.json");
+  const anos=Object.keys(T).sort((a,b)=>b-a);
+  $("ano").innerHTML=anos.map(a=>'<option value="'+a+'">Temporada '+a+'</option>').join("");
+  $("ano").onchange=e=>mostrar(e.target.value);
+  mostrar(anos[0]);
  }catch(e){$("sub").textContent="Não consegui carregar os dados: "+e.message}
 })();
 </script>

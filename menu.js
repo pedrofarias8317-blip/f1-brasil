@@ -14,3 +14,4 @@ document.addEventListener("DOMContentLoaded",()=>{
   h.innerHTML='<div class="in"><a class="marca" href="index.html">F1 <b>BRASIL</b></a><nav>'+LINKS.map(([u,t])=>'<a href="'+u+'"'+(u===atual?' class="on"':"")+'>'+t+'</a>').join("")+'</nav></div>';
   document.body.prepend(h);
 });
+Object.assign(NAC,{Swiss:"Suíça",Belgian:"Bélgica",Austrian:"Áustria",Swedish:"Suécia",American:"Estados Unidos","South African":"África do Sul",Danish:"Dinamarca",Russian:"Rússia",Chinese:"China",Polish:"Polônia",Portuguese:"Portugal",Venezuelan:"Venezuela",Colombian:"Colômbia",Chilean:"Chile",Hungarian:"Hungria",Irish:"Irlanda","Rhodesian":"Rodésia",Indian:"Índia",Indonesian:"Indonésia",Liechtensteiner:"Liechtenstein",Uruguayan:"Uruguai",Czech:"Tchéquia",Malaysian:"Malásia","East German":"Alemanha Oriental"});
