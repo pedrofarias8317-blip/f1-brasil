@@ -43,3 +43,24 @@ for corrida in calendario["MRData"]["RaceTable"]["Races"]:
     time.sleep(1)
 
 (PASTA / "resultados.json").write_text(json.dumps(resultados, ensure_ascii=False, indent=2), encoding="utf-8")
+
+arq = PASTA / "campeoes.json"
+anos = {}
+if arq.exists():
+    for lista in json.loads(arq.read_text(encoding="utf-8"))["MRData"]["StandingsTable"]["StandingsLists"]:
+        anos[lista["season"]] = lista
+ano_atual = date.today().year
+for ano in range(1950, ano_atual + 1):
+    chave = str(ano)
+    if chave in anos and ano != ano_atual:
+        continue
+    dados = buscar("/" + chave + "/driverstandings.json")
+    listas = dados["MRData"]["StandingsTable"]["StandingsLists"]
+    if listas:
+        lider = listas[0]
+        lider["DriverStandings"] = lider["DriverStandings"][:1]
+        anos[chave] = lider
+        print("ok: campeao", chave)
+    time.sleep(1)
+saida = {"MRData": {"StandingsTable": {"StandingsLists": [anos[k] for k in sorted(anos)]}}}
+arq.write_text(json.dumps(saida, ensure_ascii=False, indent=1), encoding="utf-8")

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Campeões · F1 Brasil</title>
+<style>
+:root{--bg:#f4f4f6;--panel:#fff;--ink:#15151e;--mute:#6b6b7b;--line:#dcdce4;--red:#e10600}
+@media (prefers-color-scheme:dark){:root{--bg:#0c0c10;--panel:#16161d;--ink:#f2f2f6;--mute:#9a9aad;--line:#2a2a36}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,sans-serif;line-height:1.5}
+main{max-width:760px;margin:0 auto;padding:18px 14px 48px}
+a{color:var(--red);font-weight:600}
+h1{font-size:1.8rem;margin:8px 0 4px}
+h2{font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);margin:24px 0 10px}
+.sub{color:var(--mute);margin:0 0 14px}
+.list{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.row{display:grid;grid-template-columns:44px 1fr auto;gap:10px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}
+.pos{font-weight:800;color:var(--mute)}
+.row small{display:block;color:var(--mute);font-size:.78rem}
+.pts{font-weight:800;text-align:right}
+</style>
+</head>
+<body>
+<main>
+<a href="index.html">← Voltar</a>
+<h1>Campeões do mundo</h1>
+<p class="sub" id="sub">Carregando...</p>
+<h2>Mais títulos</h2>
+<div class="list" id="rank"></div>
+<h2>Ano a ano</h2>
+<div class="list" id="anos"></div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+(async()=>{
+ try{
+  const d=await (await fetch("dados/campeoes.json")).json();
+  const ano=String(new Date().getFullYear());
+  const todos=d.MRData.StandingsTable.StandingsLists.map(l=>({ano:l.season,p:l.DriverStandings[0]}));
+  const fechados=todos.filter(t=>t.ano!==ano);
+  const cont={};
+  fechados.forEach(t=>{const n=t.p.Driver.givenName+" "+t.p.Driver.familyName;(cont[n]=cont[n]||[]).push(t.ano)});
+  const rank=Object.entries(cont).sort((a,b)=>b[1].length-a[1].length||a[1][0]-b[1][0]).slice(0,10);
+  $("sub").textContent=fechados.length+" campeonatos de pilotos decididos, de "+fechados[0].ano+" a "+fechados[fechados.length-1].ano+".";
+  $("rank").innerHTML=rank.map(([n,a],i)=>`<div class="row"><span class="pos">${i+1}º</span><span><b>${n}</b><small>${a.join(", ")}</small></span><span class="pts">${a.length}</span></div>`).join("");
+  $("anos").innerHTML=todos.slice().reverse().map(t=>`<div class="row"><span class="pos">${t.ano}</span><span><b>${t.p.Driver.givenName} ${t.p.Driver.familyName}</b><small>${t.p.Constructors.map(c=>c.name).join(" / ")}${t.ano===ano?" · líder, temporada em andamento":""}</small></span><span class="pts">${t.p.points}</span></div>`).join("");
+ }catch(err){$("sub").textContent="Não consegui carregar os dados: "+err.message}
+})();
+</script>
+</body>
+</html>
