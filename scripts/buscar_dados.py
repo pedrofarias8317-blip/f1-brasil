@@ -214,3 +214,60 @@ for corrida in calendario["MRData"]["RaceTable"]["Races"]:
     print("ok: circuito", cid)
     arq4.write_text(json.dumps(circ, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
 arq4.write_text(json.dumps(circ, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+
+
+arq5 = PASTA / "equipes_stats.json"
+est_eq = json.loads(arq5.read_text(encoding="utf-8")) if arq5.exists() else {}
+tab = json.loads((PASTA / "equipes.json").read_text(encoding="utf-8"))["MRData"]["StandingsTable"]["StandingsLists"][0]
+for t in tab["ConstructorStandings"]:
+    cid = t["Constructor"]["constructorId"]
+    if est_eq.get(cid, {}).get("rodada") == tab["round"]:
+        continue
+    corridas_eq = {}
+    pos = 0
+    while True:
+        r = buscar("/constructors/" + cid + "/results.json?limit=100&offset=" + str(pos))
+        for c in r["MRData"]["RaceTable"]["Races"]:
+            d = corridas_eq.setdefault(c["season"] + "-" + c["round"], {"circ": c["Circuit"]["circuitName"], "vit": 0, "pod": 0})
+            for res in c["Results"]:
+                if res["positionText"] == "1":
+                    d["vit"] = 1
+                if res["positionText"] in ("1", "2", "3"):
+                    d["pod"] += 1
+        pos += 100
+        if pos >= int(r["MRData"]["total"]):
+            break
+        time.sleep(1.2)
+    time.sleep(1.2)
+    por_pista = {}
+    for d in corridas_eq.values():
+        x = por_pista.setdefault(d["circ"], [0, 0, 0])
+        x[0] += 1
+        x[1] += d["vit"]
+        x[2] += d["pod"]
+    melhores = sorted(([n] + v for n, v in por_pista.items() if v[0] >= 3), key=lambda x: (-x[2], -x[3], -x[1]))[:5]
+    temp = json.loads((PASTA / "temporadas.json").read_text(encoding="utf-8"))
+    anos_titulo = sorted(int(a) for a, v in temp.items() if int(a) < ano_atual and v["equipes"] and v["equipes"][0][1] == t["Constructor"]["name"])
+    poles = total_opcional("/constructors/" + cid + "/qualifying/1.json")
+    time.sleep(1.2)
+    voltas = total_opcional("/constructors/" + cid + "/fastest/1/results.json")
+    time.sleep(1.2)
+    est_eq[cid] = {
+        "rodada": tab["round"],
+        "nome": t["Constructor"]["name"],
+        "nac": t["Constructor"].get("nationality", ""),
+        "pos": t["position"],
+        "pontos": t["points"],
+        "vit26": t["wins"],
+        "titulos": len(anos_titulo),
+        "anos": anos_titulo,
+        "corridas": len(corridas_eq),
+        "vitorias": sum(d["vit"] for d in corridas_eq.values()),
+        "podios": sum(d["pod"] for d in corridas_eq.values()),
+        "poles": poles,
+        "voltas": voltas,
+        "melhores": melhores,
+        "pilotos": [d["Driver"]["givenName"] + " " + d["Driver"]["familyName"] for d in atual["DriverStandings"] if any(c["constructorId"] == cid for c in d["Constructors"])],
+    }
+    print("ok: equipe", cid)
+    arq5.write_text(json.dumps(est_eq, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
