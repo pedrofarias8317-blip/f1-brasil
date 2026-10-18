@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Recordes · F1 Brasil</title>
+<link rel="stylesheet" href="estilo.css">
+<script src="menu.js"></script>
+</head>
+<body>
+<main>
+<h1>Recordes de todos os tempos</h1>
+<p class="sub" id="sub">Carregando...</p>
+<h2>Mais títulos mundiais</h2>
+<div class="list" id="ti"></div>
+<h2>Mais vitórias (pilotos)</h2>
+<div class="list" id="vp"></div>
+<h2>Mais pódios</h2>
+<div class="list" id="po"></div>
+<h2>Mais poles (largadas em 1º)</h2>
+<div class="list" id="pl"></div>
+<h2>Equipes com mais vitórias</h2>
+<div class="list" id="ve"></div>
+<p class="nota">Números calculados a partir dos resultados de todas as corridas de 1950 até hoje. Poles contam quem largou em primeiro, o que pode diferir da pole oficial quando houve punição. Equipes que mudaram de nome aparecem separadas.</p>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const vazio='<div class="row"><span></span><span>Dados indisponíveis.</span><span></span></div>';
+const lista=(id,a)=>{$(id).innerHTML=a.length?a.map((x,i)=>'<div class="row"><span class="pos">'+(i+1)+'</span><span><b>'+x[0]+'</b></span><span class="pts">'+x[1]+'</span></div>').join(""):vazio};
+(async()=>{
+ try{
+  const R=await lerDados("recordes.json");
+  lista("vp",R.vit_pilotos);lista("po",R.podios);lista("pl",R.poles);lista("ve",R.vit_equipes);
+  $("sub").textContent="Atualizado até a rodada "+R.rodada+" da temporada atual.";
+ }catch(e){$("sub").textContent="Não consegui carregar os dados: "+e.message}
+ try{
+  const d=await lerDados("campeoes.json");
+  const ano=new Date().getFullYear(),cont={};
+  d.MRData.StandingsTable.StandingsLists.filter(l=>+l.season<ano).forEach(l=>{
+   const p=l.DriverStandings[0].Driver,n=p.givenName+" "+p.familyName;
+   cont[n]=(cont[n]||0)+1;
+  });
+  lista("ti",Object.entries(cont).sort((a,b)=>b[1]-a[1]).slice(0,10));
+ }catch(e){}
+})();
+</script>
+</body>
+</html>

@@ -301,3 +301,42 @@ for rodada in res_atual:
     det[rodada] = {"quali": quali, "pits": pits}
     print("ok: detalhes rodada", rodada)
     arq6.write_text(json.dumps(det, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+
+
+def contar(caminho, chave):
+    pil, eq = {}, {}
+    pos = 0
+    while True:
+        r = buscar(caminho + "?limit=100&offset=" + str(pos))
+        for c in r["MRData"]["RaceTable"]["Races"]:
+            for x in c.get(chave, []):
+                n = x["Driver"]["givenName"] + " " + x["Driver"]["familyName"]
+                pil[n] = pil.get(n, 0) + 1
+                e = x["Constructor"]["name"]
+                eq[e] = eq.get(e, 0) + 1
+        pos += 100
+        if pos >= int(r["MRData"]["total"]):
+            break
+        time.sleep(1.2)
+    return pil, eq
+
+
+arq7 = PASTA / "recordes.json"
+rec = json.loads(arq7.read_text(encoding="utf-8")) if arq7.exists() else {}
+if rec.get("rodada") != atual["round"]:
+    v_p, v_e = contar("/results/1.json", "Results")
+    p2, _ = contar("/results/2.json", "Results")
+    p3, _ = contar("/results/3.json", "Results")
+    try:
+        pol, _ = contar("/grid/1/results.json", "Results")
+    except urllib.error.HTTPError:
+        pol = {}
+    pod = dict(v_p)
+    for d in (p2, p3):
+        for n, v in d.items():
+            pod[n] = pod.get(n, 0) + v
+    def top(d):
+        return sorted(d.items(), key=lambda x: -x[1])[:10]
+    rec = {"rodada": atual["round"], "vit_pilotos": top(v_p), "vit_equipes": top(v_e), "podios": top(pod), "poles": top(pol)}
+    arq7.write_text(json.dumps(rec, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    print("ok: recordes")
