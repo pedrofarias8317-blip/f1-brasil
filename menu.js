@@ -1,4 +1,4 @@
-const LINKS=[["index.html","Início"],["calendario.html","Calendário"],["corridas.html","Corridas"],["pilotos.html","Pilotos"],["equipes.html","Equipes"],["campeoes.html","Campeões"]];
+const LINKS=[["index.html","Início"],["calendario.html","Calendário"],["corridas.html","Corridas"],["pilotos.html","Pilotos"],["equipes.html","Equipes"],["circuitos.html","Circuitos"],["campeoes.html","Campeões"]];
 const NAC={British:"Reino Unido",Dutch:"Países Baixos",Italian:"Itália",Monegasque:"Mônaco",Australian:"Austrália",French:"França","New Zealander":"Nova Zelândia",Argentine:"Argentina",German:"Alemanha",Brazilian:"Brasil",Spanish:"Espanha",Thai:"Tailândia",Japanese:"Japão",Canadian:"Canadá",Finnish:"Finlândia",Mexican:"México"};
 function corEquipe(n){
   n=(n||"").toLowerCase();

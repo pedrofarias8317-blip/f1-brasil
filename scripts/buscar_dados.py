@@ -170,3 +170,47 @@ for d in atual["DriverStandings"]:
     }
     print("ok: estatisticas", pid)
     arq3.write_text(json.dumps(estat, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+
+
+arq4 = PASTA / "circuitos.json"
+circ = json.loads(arq4.read_text(encoding="utf-8")) if arq4.exists() else {}
+calendario = json.loads((PASTA / "calendario.json").read_text(encoding="utf-8"))
+for corrida in calendario["MRData"]["RaceTable"]["Races"]:
+    cid = corrida["Circuit"]["circuitId"]
+    ja_correu = corrida["date"] <= date.today().isoformat()
+    if cid in circ and not (ja_correu and circ[cid]["ate"] < ano_atual):
+        circ[cid]["rodada"] = int(corrida["round"])
+        continue
+    vitorias = []
+    pos = 0
+    while True:
+        r = buscar("/circuits/" + cid + "/results/1.json?limit=100&offset=" + str(pos))
+        for c in r["MRData"]["RaceTable"]["Races"]:
+            ganhador = c["Results"][0]
+            vitorias.append((int(c["season"]), ganhador["Driver"]["givenName"] + " " + ganhador["Driver"]["familyName"], ganhador["Constructor"]["name"]))
+        pos += 100
+        if pos >= int(r["MRData"]["total"]):
+            break
+        time.sleep(1.2)
+    time.sleep(1.2)
+    por_piloto = {}
+    por_equipe = {}
+    for _, p, e in vitorias:
+        por_piloto[p] = por_piloto.get(p, 0) + 1
+        por_equipe[e] = por_equipe.get(e, 0) + 1
+    vitorias.sort()
+    circ[cid] = {
+        "nome": corrida["Circuit"]["circuitName"],
+        "cidade": corrida["Circuit"]["Location"]["locality"],
+        "pais": corrida["Circuit"]["Location"]["country"],
+        "rodada": int(corrida["round"]),
+        "ate": ano_atual if ja_correu else ano_atual - 1,
+        "corridas": len(vitorias),
+        "primeira": vitorias[0][0] if vitorias else None,
+        "pilotos": sorted(por_piloto.items(), key=lambda x: -x[1])[:5],
+        "equipes": sorted(por_equipe.items(), key=lambda x: -x[1])[:3],
+        "recentes": [[a, p, e] for a, p, e in vitorias[-5:]][::-1],
+    }
+    print("ok: circuito", cid)
+    arq4.write_text(json.dumps(circ, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+arq4.write_text(json.dumps(circ, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")

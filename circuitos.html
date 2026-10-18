@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Circuitos · F1 Brasil</title>
+<link rel="stylesheet" href="estilo.css">
+<script src="menu.js"></script>
+<style>
+details{background:var(--panel);border:1px solid var(--line);border-radius:12px;margin-bottom:10px;overflow:hidden}
+summary{cursor:pointer;padding:12px 14px;list-style:none;display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:center}
+summary::-webkit-details-marker{display:none}
+summary b{display:block}
+summary small{color:var(--mute)}
+.corpo{padding:4px 14px 14px;border-top:1px solid var(--line);font-size:.9rem}
+.corpo h3{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);margin:14px 0 6px}
+.corpo div{display:flex;justify-content:space-between;padding:3px 0}
+</style>
+</head>
+<body>
+<main>
+<h1>Circuitos</h1>
+<p class="sub" id="sub">Carregando...</p>
+<div id="lista"></div>
+<p class="nota">Vencedores contam todas as corridas de Fórmula 1 disputadas em cada pista desde 1950. Alguns circuitos mudaram de traçado ao longo dos anos.</p>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+(async()=>{
+ try{
+  const C=await lerDados("circuitos.json");
+  const itens=Object.values(C).sort((a,b)=>a.rodada-b.rodada);
+  $("sub").textContent=itens.length+" circuitos da temporada atual, na ordem do calendário. Toque para ver o histórico.";
+  $("lista").innerHTML=itens.map(c=>'<details><summary><span class="pos">'+c.rodada+'</span><span><b>'+c.nome+'</b><small>'+c.cidade+', '+c.pais+'</small></span><span class="pts">'+c.corridas+' GPs</span></summary><div class="corpo"><h3>Mais vitórias na pista</h3>'+c.pilotos.map(p=>'<div><span>'+p[0]+'</span><b>'+p[1]+'</b></div>').join("")+'<h3>Equipes mais vitoriosas</h3>'+c.equipes.map(p=>'<div><span>'+p[0]+'</span><b>'+p[1]+'</b></div>').join("")+'<h3>Últimos vencedores</h3>'+c.recentes.map(r=>'<div><span>'+r[0]+' · '+r[1]+'</span><span>'+r[2]+'</span></div>').join("")+'<h3>Primeiro GP</h3><div><span>'+(c.primeira||"—")+'</span></div></div></details>').join("");
+ }catch(e){$("sub").textContent="Não consegui carregar os dados: "+e.message}
+})();
+</script>
+</body>
+</html>
