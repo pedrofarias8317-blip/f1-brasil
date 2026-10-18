@@ -271,3 +271,33 @@ for t in tab["ConstructorStandings"]:
     }
     print("ok: equipe", cid)
     arq5.write_text(json.dumps(est_eq, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+
+
+def buscar_seguro(caminho):
+    try:
+        return buscar(caminho)
+    except urllib.error.HTTPError:
+        return None
+
+
+arq6 = PASTA / "detalhes.json"
+det = json.loads(arq6.read_text(encoding="utf-8")) if arq6.exists() else {}
+res_atual = json.loads((PASTA / "resultados.json").read_text(encoding="utf-8"))
+for rodada in res_atual:
+    if rodada in det and det[rodada]["quali"]:
+        continue
+    q = buscar_seguro("/current/" + rodada + "/qualifying.json")
+    time.sleep(1.2)
+    p = buscar_seguro("/current/" + rodada + "/pitstops.json?limit=100")
+    time.sleep(1.2)
+    quali = []
+    if q and q["MRData"]["RaceTable"]["Races"]:
+        for x in q["MRData"]["RaceTable"]["Races"][0]["QualifyingResults"]:
+            quali.append([x["position"], x["Driver"]["givenName"] + " " + x["Driver"]["familyName"], x["Constructor"]["name"], x.get("Q1", ""), x.get("Q2", ""), x.get("Q3", "")])
+    pits = []
+    if p and p["MRData"]["RaceTable"]["Races"]:
+        for x in p["MRData"]["RaceTable"]["Races"][0]["PitStops"]:
+            pits.append([x["driverId"], x["stop"], x["lap"], x["duration"]])
+    det[rodada] = {"quali": quali, "pits": pits}
+    print("ok: detalhes rodada", rodada)
+    arq6.write_text(json.dumps(det, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")

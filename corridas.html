@@ -1,50 +1,70 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-<head><link rel="stylesheet" href="estilo.css"><script src="menu.js"></script>
+<head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Corridas · F1 Brasil</title>
+<link rel="stylesheet" href="estilo.css">
+<script src="menu.js"></script>
 <style>
-:root{--bg:#f4f4f6;--panel:#fff;--ink:#15151e;--mute:#6b6b7b;--line:#dcdce4;--red:#e10600}
-@media (prefers-color-scheme:dark){:root{--bg:#0c0c10;--panel:#16161d;--ink:#f2f2f6;--mute:#9a9aad;--line:#2a2a36}}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,sans-serif;line-height:1.5}
-main{max-width:760px;margin:0 auto;padding:18px 14px 48px}
-a{color:var(--red);font-weight:600}
-h1{font-size:1.8rem;margin:8px 0 4px}
-.sub{color:var(--mute);margin:0 0 14px}
-select{font:inherit;width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--ink);margin-bottom:12px}
-.list{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
-.row{display:grid;grid-template-columns:30px 1fr auto;gap:10px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line)}
-.row:last-child{border-bottom:0}
-.pos{font-weight:800;color:var(--mute)}
-.row small{display:block;color:var(--mute);font-size:.78rem}
-.pts{font-weight:800;text-align:right}
+.abas{display:flex;gap:8px;margin:12px 0}
+.abas button{font:inherit;cursor:pointer;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:7px 16px;font-weight:600}
+.abas button.on{background:var(--red);border-color:var(--red);color:#fff}
 </style>
 </head>
 <body>
 <main>
-<h1>Resultados das corridas</h1>
+<h1>Corridas</h1>
 <p class="sub" id="sub">Carregando...</p>
 <select id="gp" aria-label="Escolher corrida"></select>
+<div class="grade" id="resumo"></div>
+<div id="abas"></div>
 <div class="list" id="lista"></div>
+<p class="nota" id="nota"></p>
 </main>
 <script>
 const $=id=>document.getElementById(id);
-let R={};
-function mostrar(r){
- const c=R[r];
+let R={},D={},rodada="",aba="corrida";
+const lin=(p,t,s,r,c)=>'<div class="row" style="--cor:'+c+'"><span class="pos">'+p+'</span><span><b>'+t+'</b><small>'+s+'</small></span><span class="pts">'+r+'</span></div>';
+const nome=d=>d.givenName+" "+d.familyName;
+function resumo(c){
+ const g=c.Results.find(x=>x.grid==="1");
+ const fl=c.Results.find(x=>x.FastestLap&&x.FastestLap.rank==="1");
+ const k=[["Vencedor",nome(c.Results[0].Driver)],["Pole",g?nome(g.Driver):"—"]];
+ k.push(["Volta mais rápida",fl?nome(fl.Driver)+" ("+fl.FastestLap.Time.time+")":"—"]);
+ $("resumo").innerHTML=k.map(x=>'<div class="k"><small>'+x[0]+'</small><b style="font-size:1rem">'+x[1]+'</b></div>').join("");
+}
+function mostrar(){
+ const c=R[rodada],d=D[rodada]||{quali:[],pits:[]};
  $("sub").textContent=c.Circuit.circuitName+" · "+c.Circuit.Location.locality+", "+pais(c.Circuit.Location.country)+" · "+new Date(c.date+"T12:00:00").toLocaleDateString("pt-BR",{day:"2-digit",month:"long",year:"numeric"});
- $("lista").innerHTML=c.Results.map(x=>`<div class="row"><span class="pos">${x.position}</span><span><b>${x.Driver.givenName} ${x.Driver.familyName}</b><small>${x.Constructor.name} · largou em ${x.grid==="0"?"box":x.grid+"º"}${x.Time?" · "+x.Time.time:" · "+x.status}</small></span><span class="pts">${x.points}</span></div>`).join("");
+ resumo(c);
+ document.querySelectorAll(".abas button").forEach(b=>b.classList.toggle("on",b.dataset.a===aba));
+ $("nota").textContent="";
+ const vazio=t=>lin("",t,"","","#888");
+ if(aba==="corrida"){
+  $("lista").innerHTML=c.Results.map(x=>lin(x.position,nome(x.Driver),x.Constructor.name+" · largou em "+(x.grid==="0"?"box":x.grid+"º")+(x.Time?" · "+x.Time.time:" · "+x.status),x.points,corEquipe(x.Constructor.name))).join("");
+ }else if(aba==="quali"){
+  $("lista").innerHTML=d.quali.map(x=>lin(x[0],x[1],x[2],x[5]||x[4]||x[3]||"—",corEquipe(x[2]))).join("")||vazio("Classificação ainda não disponível.");
+  $("nota").textContent="À direita, o melhor tempo da última fase que o piloto disputou (Q3, Q2 ou Q1).";
+ }else{
+  const nomes={};
+  c.Results.forEach(x=>{nomes[x.Driver.driverId]=[nome(x.Driver),x.Constructor.name]});
+  $("lista").innerHTML=d.pits.map(p=>{const n=nomes[p[0]]||[p[0],""];return lin(p[2],n[0],n[1]+" · parada "+p[1],p[3],corEquipe(n[1]))}).join("")||vazio("Sem dados de pit stops para esta corrida.");
+  $("nota").textContent="À esquerda, a volta em que cada parada aconteceu. À direita, a duração.";
+ }
 }
 (async()=>{
  try{
-  R=await (await fetch("dados/resultados.json")).json();
-  const rodadas=Object.keys(R).sort((a,b)=>b-a);
-  $("gp").innerHTML=rodadas.map(r=>`<option value="${r}">Rodada ${r} · ${nomeGP(R[r].raceName)}</option>`).join("");
-  $("gp").onchange=e=>mostrar(e.target.value);
-  mostrar(rodadas[0]);
- }catch(err){$("sub").textContent="Não consegui carregar os dados: "+err.message}
+  R=await lerDados("resultados.json");
+  try{D=await lerDados("detalhes.json")}catch(e){D={}}
+  const rod=Object.keys(R).sort((a,b)=>b-a);
+  $("gp").innerHTML=rod.map(r=>'<option value="'+r+'">Rodada '+r+' · '+nomeGP(R[r].raceName)+'</option>').join("");
+  $("abas").className="abas";
+  $("abas").innerHTML='<button data-a="corrida">Corrida</button><button data-a="quali">Classificação</button><button data-a="pits">Pit stops</button>';
+  document.querySelectorAll(".abas button").forEach(b=>{b.onclick=()=>{aba=b.dataset.a;mostrar()}});
+  $("gp").onchange=e=>{rodada=e.target.value;mostrar()};
+  rodada=rod[0];mostrar();
+ }catch(e){$("sub").textContent="Não consegui carregar os dados: "+e.message}
 })();
 </script>
 </body>
