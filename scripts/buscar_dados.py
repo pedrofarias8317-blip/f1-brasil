@@ -104,3 +104,69 @@ for ano in range(1950, ano_atual + 1):
     arq2.write_text(json.dumps(temporadas, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     time.sleep(1.5)
 arq2.write_text(json.dumps(temporadas, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+
+
+def total_opcional(caminho):
+    try:
+        return int(buscar(caminho + "?limit=1")["MRData"]["total"])
+    except urllib.error.HTTPError:
+        return None
+
+
+arq3 = PASTA / "estatisticas.json"
+estat = json.loads(arq3.read_text(encoding="utf-8")) if arq3.exists() else {"pilotos": {}}
+atual = json.loads((PASTA / "pilotos.json").read_text(encoding="utf-8"))["MRData"]["StandingsTable"]["StandingsLists"][0]
+camp = json.loads((PASTA / "campeoes.json").read_text(encoding="utf-8"))["MRData"]["StandingsTable"]["StandingsLists"]
+titulos = {}
+for lista in camp:
+    if int(lista["season"]) < ano_atual:
+        pid_campeao = lista["DriverStandings"][0]["Driver"]["driverId"]
+        titulos[pid_campeao] = titulos.get(pid_campeao, 0) + 1
+
+for d in atual["DriverStandings"]:
+    pid = d["Driver"]["driverId"]
+    if estat["pilotos"].get(pid, {}).get("rodada") == atual["round"]:
+        continue
+    linhas = []
+    pos = 0
+    while True:
+        r = buscar("/drivers/" + pid + "/results.json?limit=100&offset=" + str(pos))
+        for corrida in r["MRData"]["RaceTable"]["Races"]:
+            linhas.append((corrida["Circuit"]["circuitName"], corrida["Results"][0]["positionText"]))
+        pos += 100
+        if pos >= int(r["MRData"]["total"]):
+            break
+        time.sleep(1.2)
+    time.sleep(1.2)
+    circuitos = {}
+    for nome_circ, colocacao in linhas:
+        c = circuitos.setdefault(nome_circ, [0, 0, 0])
+        c[0] += 1
+        if colocacao == "1":
+            c[1] += 1
+        if colocacao in ("1", "2", "3"):
+            c[2] += 1
+    melhores = sorted(([n] + v for n, v in circuitos.items() if v[0] >= 3), key=lambda x: (-x[2], -x[3], -x[1]))[:5]
+    poles = total_opcional("/drivers/" + pid + "/qualifying/1.json")
+    time.sleep(1.2)
+    voltas = total_opcional("/drivers/" + pid + "/fastest/1/results.json")
+    time.sleep(1.2)
+    dr = d["Driver"]
+    estat["pilotos"][pid] = {
+        "rodada": atual["round"],
+        "nome": dr["givenName"] + " " + dr["familyName"],
+        "numero": dr.get("permanentNumber", ""),
+        "codigo": dr.get("code", ""),
+        "nasc": dr.get("dateOfBirth", ""),
+        "nac": dr.get("nationality", ""),
+        "equipe": d["Constructors"][0]["name"] if d["Constructors"] else "",
+        "titulos": titulos.get(pid, 0),
+        "corridas": len(linhas),
+        "vitorias": sum(1 for _, p in linhas if p == "1"),
+        "podios": sum(1 for _, p in linhas if p in ("1", "2", "3")),
+        "poles": poles,
+        "voltas": voltas,
+        "melhores": melhores,
+    }
+    print("ok: estatisticas", pid)
+    arq3.write_text(json.dumps(estat, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")

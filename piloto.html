@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Piloto · F1 Brasil</title>
+<link rel="stylesheet" href="estilo.css">
+<script src="menu.js"></script>
+</head>
+<body>
+<main>
+<a href="pilotos.html">← Todos os pilotos</a>
+<div id="topo"></div>
+<div class="grade" id="grade"></div>
+<h2>Onde costuma ir melhor</h2>
+<div class="list" id="melhores"></div>
+<p class="nota">As estatísticas somam todas as corridas de Fórmula 1 da carreira. Poles contam a partir de 1994 e voltas mais rápidas a partir de 2004, que é o que a fonte de dados registra. Os melhores circuitos consideram só pistas com 3 corridas ou mais, ordenados por vitórias e depois por pódios.</p>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const v=x=>x===null||x===undefined?"—":x;
+(async()=>{
+ try{
+  const id=new URLSearchParams(location.search).get("id");
+  const d=(await lerDados("estatisticas.json")).pilotos[id];
+  if(!d){$("topo").innerHTML="<h1>Piloto não encontrado</h1>";return}
+  document.title=d.nome+" · F1 Brasil";
+  const nasc=d.nasc?new Date(d.nasc+"T12:00:00"):null;
+  const idade=nasc?Math.floor((Date.now()-nasc)/31557600000):"";
+  $("topo").innerHTML='<h1 style="border-left:6px solid '+corEquipe(d.equipe)+';padding-left:12px;margin-top:14px">'+d.nome+'</h1><p class="sub">'+d.equipe+' · '+(NAC[d.nac]||d.nac)+(d.numero?' · nº '+d.numero:'')+(nasc?' · nasceu em '+nasc.toLocaleDateString("pt-BR")+' ('+idade+' anos)':'')+'</p>';
+  const pct=n=>d.corridas?(n/d.corridas*100).toFixed(1).replace(".",",")+"%":"—";
+  const k=[["Títulos",d.titulos],["Corridas",d.corridas],["Vitórias",d.vitorias],["Pódios",d.podios],["Poles",v(d.poles)],["Voltas mais rápidas",v(d.voltas)],["% de vitórias",pct(d.vitorias)],["% de pódios",pct(d.podios)]];
+  $("grade").innerHTML=k.map(x=>'<div class="k"><small>'+x[0]+'</small><b>'+x[1]+'</b></div>').join("");
+  $("melhores").innerHTML=d.melhores.length?d.melhores.map((m,i)=>'<div class="row" style="--cor:'+corEquipe(d.equipe)+'"><span class="pos">'+(i+1)+'</span><span><b>'+m[0]+'</b><small>'+m[1]+' corridas</small></span><span class="pts">'+m[2]+' vit. · '+m[3]+' pód.</span></div>').join(""):'<div class="row"><span></span><span>Ainda sem circuitos com 3 corridas ou mais.</span><span></span></div>';
+ }catch(e){$("topo").innerHTML="<h1>Erro</h1><p>"+e.message+"</p>"}
+})();
+</script>
+</body>
+</html>

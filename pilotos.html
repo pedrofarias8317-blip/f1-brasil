@@ -10,6 +10,9 @@
 <body>
 <main>
 <h1>Pilotos</h1>
+<p class="sub">Toque em um piloto da temporada atual para ver as estatísticas de carreira.</p>
+<div class="cards" id="cards"></div>
+<h2>Classificação por temporada</h2>
 <p class="sub" id="sub">Carregando...</p>
 <select id="ano" aria-label="Escolher temporada"></select>
 <div class="list" id="lista"></div>
@@ -23,6 +26,10 @@ function mostrar(a){
  $("lista").innerHTML=t.pilotos.map(d=>'<div class="row" style="--cor:'+corEquipe(d[2].split(" / ")[0])+'"><span class="pos">'+d[0]+'</span><span><b>'+d[1]+'</b><small>'+d[2]+' · '+(NAC[d[5]]||d[5])+' · '+d[4]+' vitória(s)</small></span><span class="pts">'+d[3]+'</span></div>').join("");
 }
 (async()=>{
+ try{
+  const E=(await lerDados("estatisticas.json")).pilotos;
+  $("cards").innerHTML=Object.entries(E).map(([id,d])=>'<a class="card" style="--cor:'+corEquipe(d.equipe)+'" href="piloto.html?id='+id+'"><span class="num">'+(d.numero||"")+'</span><b>'+d.nome+'</b><small>'+d.equipe+'</small><br><small>'+d.vitorias+' vitórias · '+d.titulos+' título(s)</small></a>').join("");
+ }catch(e){$("cards").innerHTML="<p class='sub'>Estatísticas ainda não carregadas.</p>"}
  try{
   T=await lerDados("temporadas.json");
   const anos=Object.keys(T).sort((a,b)=>b-a);

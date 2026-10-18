@@ -33,3 +33,14 @@ a{color:var(--red);font-weight:600}
 @media (max-width:720px){.duas{grid-template-columns:1fr}}
 .mais{display:inline-block;margin-top:8px;font-size:.88rem}
 select{font:inherit;width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--ink);margin-bottom:12px}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.card{display:block;background:var(--panel);border:1px solid var(--line);border-top:4px solid var(--cor,var(--red));border-radius:12px;padding:12px 14px;text-decoration:none;color:var(--ink);font-weight:400}
+.card:hover{background:var(--hi)}
+.card b{display:block}
+.card small{color:var(--mute)}
+.num{font-size:1.6rem;font-weight:900;color:var(--mute);float:right}
+.grade{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:14px 0}
+.k{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.k small{display:block;color:var(--mute);font-size:.7rem;text-transform:uppercase;letter-spacing:.06em}
+.k b{font-size:1.5rem}
+.nota{color:var(--mute);font-size:.78rem;margin-top:18px}
