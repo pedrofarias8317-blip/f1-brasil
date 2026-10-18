@@ -20,12 +20,12 @@
 </main>
 <script>
 const $=id=>document.getElementById(id);
-const GP=n=>"GP de "+n.replace(" Grand Prix","");
+const GP=n=>nomeGP(n);
 function contagem(prox){
   const alvo=new Date(prox.date+"T"+(prox.time||"12:00:00Z"));
   const ms=alvo-new Date();
   const d=Math.max(0,Math.floor(ms/864e5)),h=Math.max(0,Math.floor(ms%864e5/36e5)),m=Math.max(0,Math.floor(ms%36e5/6e4));
-  $("hero").innerHTML='<small>Próximo Grande Prêmio · rodada '+prox.round+'</small><h1>'+GP(prox.raceName)+'</h1><p>'+prox.Circuit.circuitName+' · '+prox.Circuit.Location.locality+', '+prox.Circuit.Location.country+'</p><p>'+alvo.toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"long"})+' às '+alvo.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})+' (no seu horário)</p><div class="cont"><div><b>'+d+'</b><span>dias</span></div><div><b>'+h+'</b><span>horas</span></div><div><b>'+m+'</b><span>min</span></div></div>';
+  $("hero").innerHTML='<small>Próximo Grande Prêmio · rodada '+prox.round+'</small><h1>'+GP(prox.raceName)+'</h1><p>'+prox.Circuit.circuitName+' · '+prox.Circuit.Location.locality+', '+pais(prox.Circuit.Location.country)+'</p><p>'+alvo.toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"long"})+' às '+alvo.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})+' (no seu horário)</p><div class="cont"><div><b>'+d+'</b><span>dias</span></div><div><b>'+h+'</b><span>horas</span></div><div><b>'+m+'</b><span>min</span></div></div>';
 }
 (async()=>{
  try{

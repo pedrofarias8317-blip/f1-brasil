@@ -34,14 +34,14 @@ const $=id=>document.getElementById(id);
 let R={};
 function mostrar(r){
  const c=R[r];
- $("sub").textContent=c.Circuit.circuitName+" · "+c.Circuit.Location.locality+", "+c.Circuit.Location.country+" · "+new Date(c.date+"T12:00:00").toLocaleDateString("pt-BR",{day:"2-digit",month:"long",year:"numeric"});
+ $("sub").textContent=c.Circuit.circuitName+" · "+c.Circuit.Location.locality+", "+pais(c.Circuit.Location.country)+" · "+new Date(c.date+"T12:00:00").toLocaleDateString("pt-BR",{day:"2-digit",month:"long",year:"numeric"});
  $("lista").innerHTML=c.Results.map(x=>`<div class="row"><span class="pos">${x.position}</span><span><b>${x.Driver.givenName} ${x.Driver.familyName}</b><small>${x.Constructor.name} · largou em ${x.grid==="0"?"box":x.grid+"º"}${x.Time?" · "+x.Time.time:" · "+x.status}</small></span><span class="pts">${x.points}</span></div>`).join("");
 }
 (async()=>{
  try{
   R=await (await fetch("dados/resultados.json")).json();
   const rodadas=Object.keys(R).sort((a,b)=>b-a);
-  $("gp").innerHTML=rodadas.map(r=>`<option value="${r}">Rodada ${r} · ${R[r].raceName.replace(" Grand Prix"," GP")}</option>`).join("");
+  $("gp").innerHTML=rodadas.map(r=>`<option value="${r}">Rodada ${r} · ${nomeGP(R[r].raceName)}</option>`).join("");
   $("gp").onchange=e=>mostrar(e.target.value);
   mostrar(rodadas[0]);
  }catch(err){$("sub").textContent="Não consegui carregar os dados: "+err.message}
