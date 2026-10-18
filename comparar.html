@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Comparar pilotos · F1 Brasil</title>
+<link rel="stylesheet" href="estilo.css">
+<script src="menu.js"></script>
+<style>
+.vs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+.tab{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.lh{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);text-align:center}
+.lh:last-child{border-bottom:0}
+.lh small{color:var(--mute);font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;padding:0 10px}
+.lh b{font-size:1.3rem;color:var(--mute)}
+.lh b.ganha{color:var(--red)}
+.nm{font-size:1.1rem;font-weight:800;text-align:center;border-top:5px solid var(--cor);background:var(--panel);border-radius:12px;padding:10px}
+.nm small{display:block;color:var(--mute);font-weight:400;font-size:.78rem}
+</style>
+</head>
+<body>
+<main>
+<h1>Comparar pilotos</h1>
+<p class="sub">Escolha dois pilotos da temporada atual e compare a carreira de cada um.</p>
+<div class="vs"><select id="a" aria-label="Primeiro piloto"></select><select id="b" aria-label="Segundo piloto"></select></div>
+<div class="vs" id="nomes"></div>
+<div class="tab" id="tab"></div>
+<p class="nota">O número em vermelho é o maior de cada linha. Poles contam a partir de 1994 e voltas mais rápidas a partir de 2004, que é o que a fonte de dados registra. Mais corridas não quer dizer melhor, só mais experiência.</p>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const pc=p=>p.toFixed(1).replace(".",",")+"%";
+const M=[
+ ["Títulos",d=>d.titulos],["Corridas",d=>d.corridas],["Vitórias",d=>d.vitorias],["Pódios",d=>d.podios],
+ ["Poles",d=>d.poles],["Voltas mais rápidas",d=>d.voltas],
+ ["% de vitórias",d=>d.corridas?d.vitorias/d.corridas*100:null,pc],
+ ["% de pódios",d=>d.corridas?d.podios/d.corridas*100:null,pc]];
+let E={};
+function mostrar(){
+ const x=E[$("a").value],y=E[$("b").value];
+ $("nomes").innerHTML=[x,y].map(d=>'<div class="nm" style="--cor:'+corEquipe(d.equipe)+'">'+d.nome+'<small>'+d.equipe+'</small></div>').join("");
+ $("tab").innerHTML=M.map(m=>{
+  const p=m[1](x),q=m[1](y),f=m[2]||(n=>n);
+  const ok=typeof p==="number"&&typeof q==="number"&&p!==q;
+  const cp=ok&&p>q?"ganha":"",cq=ok&&q>p?"ganha":"";
+  return '<div class="lh"><b class="'+cp+'">'+(p==null?"—":f(p))+'</b><small>'+m[0]+'</small><b class="'+cq+'">'+(q==null?"—":f(q))+'</b></div>';
+ }).join("");
+}
+(async()=>{
+ try{
+  E=(await lerDados("estatisticas.json")).pilotos;
+  const ids=Object.keys(E);
+  const op=ids.map(i=>'<option value="'+i+'">'+E[i].nome+'</option>').join("");
+  $("a").innerHTML=op;$("b").innerHTML=op;
+  $("a").value=ids[0];$("b").value=ids[1];
+  $("a").onchange=mostrar;$("b").onchange=mostrar;
+  mostrar();
+ }catch(e){$("tab").innerHTML="<p class='sub' style='padding:12px'>Não consegui carregar os dados: "+e.message+"</p>"}
+})();
+</script>
+</body>
+</html>
