@@ -10,6 +10,8 @@
 <body>
 <main>
 <div class="hero" id="hero"><small>Próximo Grande Prêmio</small><h1>Carregando...</h1></div>
+<h2>Horários do fim de semana (no seu fuso horário)</h2>
+<div class="list" id="hor"></div>
 <div class="duas">
  <div><h2>Pilotos</h2><div class="list" id="tp"></div><a class="mais" href="pilotos.html">Ver todos →</a></div>
  <div><h2>Equipes</h2><div class="list" id="te"></div><a class="mais" href="equipes.html">Ver todas →</a></div>
@@ -21,6 +23,13 @@
 <script>
 const $=id=>document.getElementById(id);
 const GP=n=>nomeGP(n);
+const SES=[["FirstPractice","Treino livre 1"],["SecondPractice","Treino livre 2"],["ThirdPractice","Treino livre 3"],["SprintQualifying","Classificação do sprint"],["SprintShootout","Classificação do sprint"],["Sprint","Sprint"],["Qualifying","Classificação"]];
+function horarios(p){
+ const it=SES.filter(s=>p[s[0]]).map(s=>({n:s[1],d:new Date(p[s[0]].date+"T"+(p[s[0]].time||"12:00:00Z"))}));
+ it.push({n:"Corrida",d:new Date(p.date+"T"+(p.time||"12:00:00Z"))});
+ it.sort((a,b)=>a.d-b.d);
+ $("hor").innerHTML=it.map(x=>'<div class="row"><span class="pos"></span><span><b>'+x.n+'</b><small>'+x.d.toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"short"})+'</small></span><span class="pts">'+x.d.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})+'</span></div>').join("");
+}
 function contagem(prox){
   const alvo=new Date(prox.date+"T"+(prox.time||"12:00:00Z"));
   const ms=alvo-new Date();
@@ -33,7 +42,7 @@ function contagem(prox){
   const sp=p.MRData.StandingsTable.StandingsLists[0],se=e.MRData.StandingsTable.StandingsLists[0];
   const corridas=c.MRData.RaceTable.Races;
   const prox=corridas.find(x=>new Date(x.date+"T"+(x.time||"12:00:00Z"))>new Date());
-  if(prox){contagem(prox);setInterval(()=>contagem(prox),60000)}
+  if(prox){contagem(prox);horarios(prox);setInterval(()=>contagem(prox),60000)}
   else $("hero").innerHTML='<small>Temporada '+sp.season+'</small><h1>Temporada encerrada</h1><p>Veja a classificação final abaixo.</p>';
   $("tp").innerHTML=sp.DriverStandings.slice(0,5).map(d=>'<div class="row" style="--cor:'+corEquipe(d.Constructors[0]&&d.Constructors[0].name)+'"><span class="pos">'+d.position+'</span><span><b>'+d.Driver.givenName+' '+d.Driver.familyName+'</b><small>'+d.Constructors.map(x=>x.name).join(" / ")+'</small></span><span class="pts">'+d.points+'</span></div>').join("");
   $("te").innerHTML=se.ConstructorStandings.slice(0,5).map(t=>'<div class="row" style="--cor:'+corEquipe(t.Constructor.name)+'"><span class="pos">'+t.position+'</span><span><b>'+t.Constructor.name+'</b><small>'+t.wins+' vitória(s)</small></span><span class="pts">'+t.points+'</span></div>').join("");
