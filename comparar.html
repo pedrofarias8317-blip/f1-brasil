@@ -4,58 +4,123 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Comparar pilotos · F1 Brasil</title>
-<link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="icone-180.png"><meta name="theme-color" content="#15151e"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="F1 Brasil"><link rel="stylesheet" href="estilo.css">
+<link rel="stylesheet" href="estilo.css">
 <script src="menu.js"></script>
 <style>
-.vs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
-.tab{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
-.lh{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);text-align:center}
+.vs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}
+.tab{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:12px}
+.lh{display:grid;grid-template-columns:1fr 1.3fr 1fr;align-items:center;padding:9px 14px;border-bottom:1px solid var(--line);text-align:center}
 .lh:last-child{border-bottom:0}
-.lh small{color:var(--mute);font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;padding:0 10px}
-.lh b{font-size:1.3rem;color:var(--mute)}
+.lh small{color:var(--mute);font-size:.72rem;text-transform:uppercase;letter-spacing:.05em}
+.lh b{font-size:1.25rem;color:var(--mute)}
 .lh b.ganha{color:var(--red)}
-.nm{font-size:1.1rem;font-weight:800;text-align:center;border-top:5px solid var(--cor);background:var(--panel);border-radius:12px;padding:10px}
-.nm small{display:block;color:var(--mute);font-weight:400;font-size:.78rem}
+.nm{font-size:1.05rem;font-weight:800;text-align:center;border-top:5px solid var(--cor);background:var(--panel);border-radius:12px;padding:10px}
+.nm small{display:block;color:var(--mute);font-weight:400;font-size:.76rem}
+.fil{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:10px 0;align-items:end}
+.fil label{font-size:.75rem;color:var(--mute);display:block}
+input[type=number],input[list]{font:inherit;width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
+.h2h{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.h2h div{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center}
+.h2h b{font-size:1.5rem}
+.h2h small{display:block;color:var(--mute);font-size:.74rem}
 </style>
 </head>
 <body>
 <main>
 <h1>Comparar pilotos</h1>
-<p class="sub">Escolha dois pilotos da temporada atual e compare a carreira de cada um.</p>
-<div class="vs"><select id="a" aria-label="Primeiro piloto"></select><select id="b" aria-label="Segundo piloto"></select></div>
+<p class="sub" id="sub">Carregando o histórico completo...</p>
+<div class="vs"><input id="a" list="pl" placeholder="Primeiro piloto" aria-label="Primeiro piloto"><input id="b" list="pl" placeholder="Segundo piloto" aria-label="Segundo piloto"></div>
+<datalist id="pl"></datalist>
+<div class="fil">
+<div><label for="pre">Período</label><select id="pre"></select></div>
+<div><label for="de">De (ano)</label><input id="de" type="number" value="1950"></div>
+<div><label for="ate">Até (ano)</label><input id="ate" type="number" value="2100"></div>
+<div><label><input type="checkbox" id="eq"> Só corridas na mesma equipe</label></div>
+</div>
 <div class="vs" id="nomes"></div>
 <div class="tab" id="tab"></div>
-<p class="nota">O número em vermelho é o maior de cada linha. Poles contam a partir de 1994 e voltas mais rápidas a partir de 2004, que é o que a fonte de dados registra. Mais corridas não quer dizer melhor, só mais experiência.</p>
+<h2>Confronto direto</h2>
+<div class="h2h" id="h2h"></div>
+<p class="nota" id="aviso"></p>
+<p class="nota">Largada em 1º é usada no lugar da pole oficial, porque a fonte só registra a classificação completa a partir dos anos 1990 (punições podem mudar a largada). O confronto na largada compara a posição de largada. Abandonos incluem quem não completou a prova e desclassificados. Pontos não são comparados, porque o sistema mudou várias vezes ao longo da história.</p>
 </main>
 <script>
 const $=id=>document.getElementById(id);
-const pc=p=>p.toFixed(1).replace(".",",")+"%";
-const M=[
- ["Títulos",d=>d.titulos],["Corridas",d=>d.corridas],["Vitórias",d=>d.vitorias],["Pódios",d=>d.podios],
- ["Poles",d=>d.poles],["Voltas mais rápidas",d=>d.voltas],
- ["% de vitórias",d=>d.corridas?d.vitorias/d.corridas*100:null,pc],
- ["% de pódios",d=>d.corridas?d.podios/d.corridas*100:null,pc]];
-let E={};
+let H,CH={},E={};
+const PRE=[["Toda a carreira",1950,2100],["Anos 1950–1979",1950,1979],["Anos 1980–1999",1980,1999],["2000–2013 (V10 e V8)",2000,2013],["2014–2021 (turbo-híbrida)",2014,2021],["2022 em diante (efeito solo)",2022,2100]];
+const achar=t=>H.pilotos.findIndex(p=>p[1].toLowerCase()===t.trim().toLowerCase());
+const key=x=>x.a*100+x.r;
+function filtrar(ia,ib){
+ const de=+$("de").value||1950,ate=+$("ate").value||2100;
+ let A=(E[ia]||[]).filter(x=>x.a>=de&&x.a<=ate),B=(E[ib]||[]).filter(x=>x.a>=de&&x.a<=ate);
+ if($("eq").checked){
+  const mb=new Map(B.map(x=>[key(x),x]));
+  const ks=new Set(A.filter(x=>mb.has(key(x))&&mb.get(key(x)).e===x.e).map(key));
+  A=A.filter(x=>ks.has(key(x)));B=B.filter(x=>ks.has(key(x)));
+ }
+ return [A,B];
+}
+function stats(ip,L){
+ const c=f=>L.filter(f).length,nome=H.pilotos[ip][1];
+ let t=0;new Set(L.map(x=>x.a)).forEach(a=>{if(CH[a]===nome)t++});
+ return {n:L.length,t,v:c(x=>x.p===1),po:c(x=>x.p>=1&&x.p<=3),pl:c(x=>x.g===1),pv:c(x=>x.g===1&&x.p===1),ab:c(x=>x.p===0)};
+}
+function h2h(A,B){
+ const mb=new Map(B.map(x=>[key(x),x]));
+ let n=0,fa=0,fb=0,ga=0,gb=0;
+ A.forEach(x=>{
+  const y=mb.get(key(x));if(!y)return;n++;
+  const pa=x.p||99,pb=y.p||99;if(pa<pb)fa++;else if(pb<pa)fb++;
+  const ra=x.g||99,rb=y.g||99;if(ra<rb)ga++;else if(rb<ra)gb++;
+ });
+ return {n,fa,fb,ga,gb};
+}
+const r=(n,d)=>d?n/d*100:null;
+const fmt=(v,pct)=>v===null||v===undefined?"—":pct?v.toFixed(1).replace(".",",")+"%":v;
+function linhas(a,b,mesma){
+ return [
+  ["Corridas",a.n,b.n,0],
+  ["Títulos",mesma?null:a.t,mesma?null:b.t,1],
+  ["Vitórias",a.v,b.v,1],
+  ["% de vitórias",r(a.v,a.n),r(b.v,b.n),1,1],
+  ["Pódios",a.po,b.po,1],
+  ["% de pódios",r(a.po,a.n),r(b.po,b.n),1,1],
+  ["Largadas em 1º",a.pl,b.pl,1],
+  ["% das largadas em 1º que viraram vitória",r(a.pv,a.pl),r(b.pv,b.pl),1,1],
+  ["% de corridas sem terminar",r(a.ab,a.n),r(b.ab,b.n),-1,1]
+ ];
+}
+function anos(L){return L.length?L[0].a+"–"+L[L.length-1].a:"sem corridas"}
 function mostrar(){
- const x=E[$("a").value],y=E[$("b").value];
- $("nomes").innerHTML=[x,y].map(d=>'<div class="nm" style="--cor:'+corEquipe(d.equipe)+'">'+d.nome+'<small>'+d.equipe+'</small></div>').join("");
- $("tab").innerHTML=M.map(m=>{
-  const p=m[1](x),q=m[1](y),f=m[2]||(n=>n);
-  const ok=typeof p==="number"&&typeof q==="number"&&p!==q;
-  const cp=ok&&p>q?"ganha":"",cq=ok&&q>p?"ganha":"";
-  return '<div class="lh"><b class="'+cp+'">'+(p==null?"—":f(p))+'</b><small>'+m[0]+'</small><b class="'+cq+'">'+(q==null?"—":f(q))+'</b></div>';
+ const ia=achar($("a").value),ib=achar($("b").value);
+ if(ia<0||ib<0){$("sub").textContent="Escolha dois pilotos da lista (digite parte do nome).";return}
+ const [A,B]=filtrar(ia,ib),a=stats(ia,A),b=stats(ib,B),mesma=$("eq").checked;
+ $("sub").textContent=H.corridas.length+" corridas de "+H.corridas[0][0]+" a "+H.corridas[H.corridas.length-1][0]+" no banco de dados.";
+ $("nomes").innerHTML=[[ia,A],[ib,B]].map(([i,L])=>'<div class="nm" style="--cor:'+corEquipe(H.equipes[(L[L.length-1]||{e:0}).e][1])+'">'+H.pilotos[i][1]+'<small>'+(NAC[H.pilotos[i][2]]||H.pilotos[i][2])+' · '+anos(L)+'</small></div>').join("");
+ $("tab").innerHTML=linhas(a,b,mesma).map(m=>{
+  const ok=m[3]!==0&&m[1]!==null&&m[2]!==null&&m[1]!==m[2];
+  const ga=ok&&(m[3]>0?m[1]>m[2]:m[1]<m[2]),gb=ok&&(m[3]>0?m[2]>m[1]:m[2]<m[1]);
+  return '<div class="lh"><b class="'+(ga?"ganha":"")+'">'+fmt(m[1],m[4])+'</b><small>'+m[0]+'</small><b class="'+(gb?"ganha":"")+'">'+fmt(m[2],m[4])+'</b></div>';
  }).join("");
+ const h=h2h(A,B),na=H.pilotos[ia][1].split(" ").slice(-1)[0],nb=H.pilotos[ib][1].split(" ").slice(-1)[0];
+ $("h2h").innerHTML=h.n?'<div><small>Terminaram à frente</small><b>'+h.fa+' x '+h.fb+'</b><small>'+na+' x '+nb+'</small></div><div><small>Largaram à frente</small><b>'+h.ga+' x '+h.gb+'</b><small>em '+h.n+' corridas juntos</small></div>':'<div style="grid-column:1/-1"><small>Eles não disputaram a mesma corrida neste período.</small></div>';
+ const ma=A.length?A[0].a:0,mb=B.length?B[0].a:0;
+ $("aviso").textContent=A.length&&B.length&&Math.abs(ma-mb)>8?"Atenção: os dois correram em épocas bem diferentes. Carros, regras e confiabilidade mudaram muito, então compare com cuidado.":"";
 }
 (async()=>{
  try{
-  E=(await lerDados("estatisticas.json")).pilotos;
-  const ids=Object.keys(E);
-  const op=ids.map(i=>'<option value="'+i+'">'+E[i].nome+'</option>').join("");
-  $("a").innerHTML=op;$("b").innerHTML=op;
-  $("a").value=ids[0];$("b").value=ids[1];
-  $("a").onchange=mostrar;$("b").onchange=mostrar;
+  H=await lerDados("historico.json");
+  const c=await lerDados("campeoes.json"),ano=new Date().getFullYear();
+  c.MRData.StandingsTable.StandingsLists.forEach(l=>{if(+l.season<ano){const d=l.DriverStandings[0].Driver;CH[+l.season]=d.givenName+" "+d.familyName}});
+  H.corridas.forEach(x=>x[3].forEach(y=>{(E[y[0]]=E[y[0]]||[]).push({a:x[0],r:x[1],e:y[1],g:y[2],p:y[3]})}));
+  $("pl").innerHTML=H.pilotos.map(p=>p[1]).sort().map(n=>'<option value="'+n+'">').join("");
+  $("pre").innerHTML=PRE.map((p,i)=>'<option value="'+i+'">'+p[0]+'</option>').join("");
+  const nm=id=>{const p=H.pilotos.find(x=>x[0]===id);return p?p[1]:""};
+  $("a").value=nm("hamilton");$("b").value=nm("max_verstappen");
+  $("pre").onchange=e=>{const p=PRE[+e.target.value];$("de").value=p[1];$("ate").value=p[2];mostrar()};
+  ["a","b","de","ate","eq"].forEach(i=>$(i).addEventListener("input",mostrar));
   mostrar();
- }catch(e){$("tab").innerHTML="<p class='sub' style='padding:12px'>Não consegui carregar os dados: "+e.message+"</p>"}
+ }catch(e){$("sub").textContent="Não consegui carregar os dados: "+e.message}
 })();
 </script>
 </body>
