@@ -21,10 +21,11 @@ def buscar(caminho):
         try:
             with urllib.request.urlopen(req, timeout=30) as resposta:
                 return json.load(resposta)
-        except urllib.error.HTTPError as erro:
-            if erro.code == 429:
-                espera = 90 * (tentativa + 1)
-                print("limite atingido, esperando", espera, "segundos...")
+        except (urllib.error.URLError, TimeoutError, ConnectionError) as erro:
+            codigo = getattr(erro, "code", 0)
+            if codigo == 429 or codigo >= 500 or codigo == 0:
+                espera = (90 if codigo == 429 else 20) * (tentativa + 1)
+                print("erro", codigo, "- esperando", espera, "segundos e tentando de novo...")
                 time.sleep(espera)
                 continue
             raise
@@ -340,3 +341,53 @@ if rec.get("rodada") != atual["round"]:
     rec = {"rodada": atual["round"], "vit_pilotos": top(v_p), "vit_equipes": top(v_e), "podios": top(pod), "poles": top(pol)}
     arq7.write_text(json.dumps(rec, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     print("ok: recordes")
+
+
+arq8 = PASTA / "historico.json"
+H = json.loads(arq8.read_text(encoding="utf-8")) if arq8.exists() else {"pilotos": [], "equipes": [], "circuitos": [], "corridas": []}
+ip = {p[0]: i for i, p in enumerate(H["pilotos"])}
+ie = {e[0]: i for i, e in enumerate(H["equipes"])}
+ic = {c[0]: i for i, c in enumerate(H["circuitos"])}
+anos_prontos = {c[0] for c in H["corridas"]}
+
+
+def indice(lista, mapa, chave, item):
+    if chave not in mapa:
+        mapa[chave] = len(lista)
+        lista.append(item)
+    return mapa[chave]
+
+
+def numero(texto):
+    v = float(texto)
+    return int(v) if v == int(v) else v
+
+
+for ano in range(1950, ano_atual + 1):
+    if ano in anos_prontos and ano != ano_atual:
+        continue
+    H["corridas"] = [c for c in H["corridas"] if c[0] != ano]
+    corr = {}
+    desloc = 0
+    while True:
+        r = buscar("/" + str(ano) + "/results.json?limit=100&offset=" + str(desloc))
+        for c in r["MRData"]["RaceTable"]["Races"]:
+            ci = c["Circuit"]
+            idx_c = indice(H["circuitos"], ic, ci["circuitId"], [ci["circuitId"], ci["circuitName"]])
+            linhas = corr.setdefault(int(c["round"]), [idx_c, []])[1]
+            for x in c["Results"]:
+                d = x["Driver"]
+                e = x["Constructor"]
+                i_p = indice(H["pilotos"], ip, d["driverId"], [d["driverId"], d["givenName"] + " " + d["familyName"], d.get("nationality", "")])
+                i_e = indice(H["equipes"], ie, e["constructorId"], [e["constructorId"], e["name"]])
+                colocacao = int(x["position"]) if x["positionText"].isdigit() else 0
+                linhas.append([i_p, i_e, int(x["grid"]), colocacao, numero(x["points"])])
+        desloc += 100
+        if desloc >= int(r["MRData"]["total"]):
+            break
+        time.sleep(1.2)
+    for rod in sorted(corr):
+        H["corridas"].append([ano, rod, corr[rod][0], corr[rod][1]])
+    arq8.write_text(json.dumps(H, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    print("ok: historico", ano)
+    time.sleep(1.2)
