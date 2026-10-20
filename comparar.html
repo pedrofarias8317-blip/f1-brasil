@@ -157,8 +157,8 @@ mostrar=function(){_mostrar();extras()};
 function ajustar(c,txt,peso,tam,max){let s=tam;c.font=peso+" "+s+"px sans-serif";while(c.measureText(txt).width>max&&s>24){s-=2;c.font=peso+" "+s+"px sans-serif"}}
 function nomeCard(c,i,j,y){
  const t=(bandeira(H.pilotos[i][2])+" "+H.pilotos[i][1]).trim(),W=1080;
- c.fillStyle=CORES[j];ajustar(c,t,"800",66,W-140);c.fillText(t,W/2,y);
- const w=c.measureText(t).width;c.fillRect(W/2-w/2,y+14,w,8);
+ c.fillStyle="#ffffff";ajustar(c,t,"800",66,W-140);c.fillText(t,W/2,y);
+ const w=c.measureText(t).width;c.fillStyle=CORES[j];c.fillRect(W/2-w/2,y+14,w,8);
 }
 function gerarCard(){
  const d=LAST;if(!d){$("cardbox").textContent="Escolha dois pilotos primeiro.";return}
