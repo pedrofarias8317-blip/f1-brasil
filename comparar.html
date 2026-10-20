@@ -13,7 +13,8 @@
 .lh:last-child{border-bottom:0}
 .lh small{color:var(--mute);font-size:.72rem;text-transform:uppercase;letter-spacing:.05em}
 .lh b{font-size:1.25rem;color:var(--mute)}
-.lh b.ganha{color:var(--red)}
+.lh b.ganha{color:#e10600}
+.lh b.ganha2{color:#3b82f6}
 .nm{font-size:1.05rem;font-weight:800;text-align:center;border-top:5px solid var(--cor);background:var(--panel);border-radius:12px;padding:10px}
 .nm small{display:block;color:var(--mute);font-weight:400;font-size:.76rem}
 .fil{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:10px 0;align-items:end}
@@ -101,11 +102,11 @@ function mostrar(){
  if(ia<0||ib<0){$("sub").textContent="Escolha dois pilotos da lista (digite parte do nome).";return}
  const [A,B]=filtrar(ia,ib),a=stats(ia,A),b=stats(ib,B),mesma=$("eq").checked;
  $("sub").textContent=H.corridas.length+" corridas de "+H.corridas[0][0]+" a "+H.corridas[H.corridas.length-1][0]+" no banco de dados.";
- $("nomes").innerHTML=[[ia,A],[ib,B]].map(([i,L])=>'<div class="nm" style="--cor:'+corEquipe(H.equipes[(L[L.length-1]||{e:0}).e][1])+'">'+H.pilotos[i][1]+'<small>'+(NAC[H.pilotos[i][2]]||H.pilotos[i][2])+' · '+anos(L)+'</small></div>').join("");
+ $("nomes").innerHTML=[[ia,A],[ib,B]].map(([i,L],j)=>'<div class="nm" style="--cor:'+CORES[j]+'">'+bandeira(H.pilotos[i][2])+' '+H.pilotos[i][1]+'<small>'+(NAC[H.pilotos[i][2]]||H.pilotos[i][2])+' · '+anos(L)+'</small></div>').join("");
  $("tab").innerHTML=linhas(a,b,mesma).map(m=>{
   const ok=m[3]!==0&&m[1]!==null&&m[2]!==null&&m[1]!==m[2];
   const ga=ok&&(m[3]>0?m[1]>m[2]:m[1]<m[2]),gb=ok&&(m[3]>0?m[2]>m[1]:m[2]<m[1]);
-  return '<div class="lh"><b class="'+(ga?"ganha":"")+'">'+fmt(m[1],m[4])+'</b><small>'+m[0]+'</small><b class="'+(gb?"ganha":"")+'">'+fmt(m[2],m[4])+'</b></div>';
+  return '<div class="lh"><b class="'+(ga?"ganha":"")+'">'+fmt(m[1],m[4])+'</b><small>'+m[0]+'</small><b class="'+(gb?"ganha2":"")+'">'+fmt(m[2],m[4])+'</b></div>';
  }).join("");
  const h=h2h(A,B),na=H.pilotos[ia][1].split(" ").slice(-1)[0],nb=H.pilotos[ib][1].split(" ").slice(-1)[0];
  $("h2h").innerHTML=h.n?'<div><small>Terminaram à frente</small><b>'+h.fa+' x '+h.fb+'</b><small>'+na+' x '+nb+'</small></div><div><small>Largaram à frente</small><b>'+h.ga+' x '+h.gb+'</b><small>em '+h.n+' corridas juntos</small></div>':'<div style="grid-column:1/-1"><small>Eles não disputaram a mesma corrida neste período.</small></div>';
@@ -114,67 +115,81 @@ function mostrar(){
 }
 document.head.insertAdjacentHTML("beforeend","<style>.btn{font:inherit;cursor:pointer;background:var(--red);color:#fff;border:0;border-radius:999px;padding:10px 18px;font-weight:700;text-decoration:none;display:inline-block;margin:0 8px 8px 0}</style>");
 let LAST=null;
+const FLAG={British:"🇬🇧",Dutch:"🇳🇱",Italian:"🇮🇹",Monegasque:"🇲🇨",Australian:"🇦🇺",French:"🇫🇷","New Zealander":"🇳🇿",Argentine:"🇦🇷",Argentinian:"🇦🇷",German:"🇩🇪","East German":"🇩🇪",Brazilian:"🇧🇷",Spanish:"🇪🇸",Thai:"🇹🇭",Japanese:"🇯🇵",Canadian:"🇨🇦",Finnish:"🇫🇮",Mexican:"🇲🇽",Swiss:"🇨🇭",Belgian:"🇧🇪",Austrian:"🇦🇹",Swedish:"🇸🇪",American:"🇺🇸","South African":"🇿🇦",Danish:"🇩🇰",Russian:"🇷🇺",Chinese:"🇨🇳",Polish:"🇵🇱",Portuguese:"🇵🇹",Venezuelan:"🇻🇪",Colombian:"🇨🇴",Chilean:"🇨🇱",Hungarian:"🇭🇺",Irish:"🇮🇪",Indian:"🇮🇳",Indonesian:"🇮🇩",Uruguayan:"🇺🇾",Czech:"🇨🇿",Malaysian:"🇲🇾",Liechtensteiner:"🇱🇮"};
+const bandeira=n=>FLAG[n]||"";
 const tema=()=>{const g=getComputedStyle(document.documentElement),v=n=>g.getPropertyValue(n).trim();return{ink:v("--ink")||"#15151e",mute:v("--mute")||"#6b6b7b",line:v("--line")||"#dcdce4"}};
 const CORES=["#e10600","#3b82f6"];
 const porAno=L=>{const m={};L.forEach(x=>{m[x.a]=(m[x.a]||0)+x.s});return m};
-function desenhar(cv,W,Ht,S,rot,t,k){
+const titulosDe=(ip,L)=>new Set(L.map(x=>x.a).filter(a=>CH[a]===H.pilotos[ip][1]));
+function desenhar(cv,W,Ht,S,rot,t,k,T){
  const c=cv.getContext("2d");cv.width=W;cv.height=Ht;c.clearRect(0,0,W,Ht);
  const anos=[...new Set([...Object.keys(S[0]),...Object.keys(S[1])].map(Number))].sort((p,q)=>p-q);
- if(!anos.length){c.fillStyle=t.mute;c.font=(16*k)+"px sans-serif";c.fillText("Sem dados no período.",20*k,40*k);return}
- const mx=Math.max(10,...S.flatMap(s=>Object.values(s))),x0=50*k,x1=W-20*k,y0=20*k,y1=Ht-44*k,u=anos[anos.length-1]-anos[0];
+ if(!anos.length){c.fillStyle=t.ink;c.font=(16*k)+"px sans-serif";c.fillText("Sem dados no período.",20*k,40*k);return}
+ const mx=Math.max(10,...S.flatMap(s=>Object.values(s))),x0=58*k,x1=W-24*k,y0=30*k,y1=Ht-52*k,u=anos[anos.length-1]-anos[0];
  const X=a=>u?x0+(a-anos[0])/u*(x1-x0):(x0+x1)/2,Y=v=>y1-v/mx*(y1-y0);
- c.textAlign="left";c.font=(13*k)+"px sans-serif";c.lineWidth=1;
- for(let i=0;i<=4;i++){const y=Y(mx*i/4);c.strokeStyle=t.line;c.beginPath();c.moveTo(x0,y);c.lineTo(x1,y);c.stroke();c.fillStyle=t.mute;c.fillText(Math.round(mx*i/4),6*k,y+4*k)}
- const passo=Math.max(1,Math.ceil(anos.length/8));
- anos.forEach((a,i)=>{if(i%passo===0){c.fillStyle=t.mute;c.fillText(a,X(a)-16*k,y1+20*k)}});
+ c.textAlign="left";c.lineWidth=1;c.font="600 "+(14*k)+"px sans-serif";
+ for(let i=0;i<=4;i++){const y=Y(mx*i/4);c.strokeStyle=t.line;c.beginPath();c.moveTo(x0,y);c.lineTo(x1,y);c.stroke();c.fillStyle=t.ink;c.fillText(Math.round(mx*i/4),6*k,y+5*k)}
+ const passo=Math.max(1,Math.ceil(anos.length/6));
+ anos.forEach((a,i)=>{if(i%passo===0){c.fillStyle=t.ink;c.fillText(a,X(a)-18*k,y1+22*k)}});
  S.forEach((s,j)=>{
   c.strokeStyle=CORES[j];c.fillStyle=CORES[j];c.lineWidth=3*k;let ab=false;c.beginPath();
   anos.forEach(a=>{if(s[a]===undefined){ab=false;return}const x=X(a),y=Y(s[a]);if(ab)c.lineTo(x,y);else c.moveTo(x,y);ab=true});
   c.stroke();
-  anos.forEach(a=>{if(s[a]!==undefined){c.beginPath();c.arc(X(a),Y(s[a]),3.5*k,0,7);c.fill()}});
+  anos.forEach(a=>{if(s[a]!==undefined){c.beginPath();c.arc(X(a),Y(s[a]),4*k,0,7);c.fill()}});
  });
+ S.forEach((s,j)=>anos.forEach(a=>{if(s[a]!==undefined&&T&&T[j].has(a)){
+  const x=X(a),y=Y(s[a]);c.strokeStyle="#ffd24d";c.lineWidth=2.5*k;c.beginPath();c.arc(x,y,9*k,0,7);c.stroke();
+  c.fillStyle="#ffd24d";c.font=(18*k)+"px sans-serif";c.fillText("★",x-9*k,y-14*k)}}));
  c.font="600 "+(14*k)+"px sans-serif";let lx=x0;
- rot.forEach((n,j)=>{c.fillStyle=CORES[j];c.fillRect(lx,Ht-18*k,12*k,12*k);c.fillStyle=t.ink;c.fillText(n,lx+18*k,Ht-7*k);lx+=c.measureText(n).width+50*k});
+ rot.forEach((n,j)=>{c.fillStyle=CORES[j];c.fillRect(lx,Ht-20*k,14*k,14*k);c.fillStyle=t.ink;c.fillText(n,lx+20*k,Ht-8*k);lx+=c.measureText(n).width+50*k});
+ c.fillStyle="#ffd24d";c.fillText("★ ano de título",lx,Ht-8*k);
 }
 function extras(){
  const ia=achar($("a").value),ib=achar($("b").value);
  if(ia<0||ib<0){LAST=null;return}
- const [A,B]=filtrar(ia,ib);
- LAST={ia,ib,A,B,a:stats(ia,A),b:stats(ib,B),h:h2h(A,B),mesma:$("eq").checked};
+ const [A,B]=filtrar(ia,ib),T=[titulosDe(ia,A),titulosDe(ib,B)];
+ LAST={ia,ib,A,B,T,a:stats(ia,A),b:stats(ib,B),h:h2h(A,B),mesma:$("eq").checked};
  const cv=$("gr"),d=window.devicePixelRatio||1;
- desenhar(cv,Math.round(cv.clientWidth*d),Math.round(240*d),[porAno(A),porAno(B)],[H.pilotos[ia][1],H.pilotos[ib][1]],tema(),d);
+ desenhar(cv,Math.round(cv.clientWidth*d),Math.round(260*d),[porAno(A),porAno(B)],[H.pilotos[ia][1],H.pilotos[ib][1]],tema(),d*1.1,T);
 }
 const _mostrar=mostrar;
 mostrar=function(){_mostrar();extras()};
 function ajustar(c,txt,peso,tam,max){let s=tam;c.font=peso+" "+s+"px sans-serif";while(c.measureText(txt).width>max&&s>24){s-=2;c.font=peso+" "+s+"px sans-serif"}}
+function nomeCard(c,i,j,y){
+ const t=(bandeira(H.pilotos[i][2])+" "+H.pilotos[i][1]).trim(),W=1080;
+ c.fillStyle=CORES[j];ajustar(c,t,"800",66,W-140);c.fillText(t,W/2,y);
+ const w=c.measureText(t).width;c.fillRect(W/2-w/2,y+14,w,8);
+}
 function gerarCard(){
  const d=LAST;if(!d){$("cardbox").textContent="Escolha dois pilotos primeiro.";return}
- const W=1080,Ht=1350,cv=document.createElement("canvas");cv.width=W;cv.height=Ht;
+ const Z=2,W=1080,Ht=1350,cv=document.createElement("canvas");cv.width=W*Z;cv.height=Ht*Z;
  const c=cv.getContext("2d"),na=H.pilotos[d.ia][1],nb=H.pilotos[d.ib][1];
+ c.scale(Z,Z);
  c.fillStyle="#15151e";c.fillRect(0,0,W,Ht);c.fillStyle="#e10600";c.fillRect(0,0,W,14);
- c.textAlign="center";c.fillStyle="#e10600";c.font="800 34px sans-serif";c.fillText("F1 BRASIL",W/2,84);
- c.fillStyle="#ffffff";ajustar(c,na,"800",66,W-120);c.fillText(na,W/2,180);
- c.fillStyle="#8b8b9e";c.font="600 30px sans-serif";c.fillText("contra",W/2,232);
- c.fillStyle="#ffffff";ajustar(c,nb,"800",66,W-120);c.fillText(nb,W/2,310);
+ c.textAlign="center";c.fillStyle="#e10600";c.font="800 34px sans-serif";c.fillText("F1 BRASIL",W/2,80);
+ nomeCard(c,d.ia,0,166);
+ c.fillStyle="#a0a0b4";c.font="600 30px sans-serif";c.fillText("contra",W/2,238);
+ nomeCard(c,d.ib,1,314);
  const de=+$("de").value||1950,ate=+$("ate").value||2100;
- c.fillStyle="#8b8b9e";c.font="26px sans-serif";
- c.fillText(d.mesma?"Só corridas na mesma equipe":(de<=1950&&ate>=2026?"Carreira completa":"Período: "+de+(ate>=2100?" em diante":"–"+ate)),W/2,362);
+ c.fillStyle="#a0a0b4";c.font="26px sans-serif";
+ c.fillText(d.mesma?"Só corridas na mesma equipe":(de<=1950&&ate>=2026?"Carreira completa":"Período: "+de+(ate>=2100?" em diante":"–"+ate)),W/2,384);
  const L=linhas(d.a,d.b,d.mesma),idx=[1,2,3,4,5,7],rot=["Títulos","Vitórias","% de vitórias","Pódios","% de pódios","Pole → vitória"];
  const R=idx.map((i,k)=>[rot[k],L[i][1],L[i][2],L[i][4]]).filter(x=>x[1]!==null&&x[2]!==null);
  if(d.h.n)R.push(["Terminou à frente",d.h.fa,d.h.fb,0]);
  R.forEach((x,k)=>{
-  const y=450+k*76;
-  c.fillStyle="#2a2a36";c.fillRect(60,y+26,W-120,2);
-  c.font="800 46px sans-serif";
-  c.fillStyle=x[1]>x[2]?"#ff3b30":"#ffffff";c.fillText(fmt(x[1],x[3]),270,y);
-  c.fillStyle=x[2]>x[1]?"#ff3b30":"#ffffff";c.fillText(fmt(x[2],x[3]),810,y);
-  c.fillStyle="#8b8b9e";c.font="600 24px sans-serif";c.fillText(x[0],W/2,y-8);
+  const y=472+k*72;
+  c.fillStyle="#2a2a36";c.fillRect(60,y+24,W-120,2);
+  [[x[1],x[2],270,0],[x[2],x[1],810,1]].forEach(([v,o,px,j])=>{
+   const g=v>o,e=v===o;c.font="800 "+(g?54:44)+"px sans-serif";
+   c.fillStyle=e?"#ffffff":g?CORES[j]:"#9a9aae";c.fillText(fmt(v,x[3]),px,y);
+  });
+  c.fillStyle="#a0a0b4";c.font="600 24px sans-serif";c.fillText(x[0],W/2,y-8);
  });
  const tmp=document.createElement("canvas");
- desenhar(tmp,960,300,[porAno(d.A),porAno(d.B)],[na,nb],{ink:"#ffffff",mute:"#8b8b9e",line:"#2a2a36"},1);
- c.fillStyle="#8b8b9e";c.font="600 24px sans-serif";c.fillText("Pontos por temporada",W/2,982);
- c.drawImage(tmp,60,1000);
- c.font="24px sans-serif";c.fillText(location.host+"  ·  dados: Jolpica-F1",W/2,1330);
+ desenhar(tmp,960*Z,310*Z,[porAno(d.A),porAno(d.B)],[na,nb],{ink:"#f2f2f6",mute:"#c8c8d6",line:"#33333f"},1.7*Z,d.T);
+ c.fillStyle="#a0a0b4";c.font="600 24px sans-serif";c.fillText("Pontos por temporada",W/2,972);
+ c.drawImage(tmp,60,985,960,310);
+ c.font="24px sans-serif";c.fillText(location.host+"  ·  dados: Jolpica-F1",W/2,1334);
  cv.toBlob(b=>{
   const url=URL.createObjectURL(b),f=new File([b],"confronto-f1.png",{type:"image/png"});
   const pode=navigator.canShare&&navigator.canShare({files:[f]});
