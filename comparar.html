@@ -41,6 +41,11 @@ input[type=number],input[list]{font:inherit;width:100%;padding:10px;border-radiu
 <div class="tab" id="tab"></div>
 <h2>Confronto direto</h2>
 <div class="h2h" id="h2h"></div>
+<h2>Pontos por temporada</h2>
+<canvas id="gr" style="width:100%;height:240px;background:var(--panel);border:1px solid var(--line);border-radius:12px"></canvas>
+<p class="nota">Pontos conforme o sistema de cada época (a pontuação mudou várias vezes), então só dá para comparar temporadas próximas. A temporada em andamento aparece incompleta.</p>
+<p><button class="btn" id="gcard" style="font:inherit">Gerar imagem do confronto</button></p>
+<div id="cardbox"></div>
 <p class="nota" id="aviso"></p>
 <p class="nota">Largada em 1º é usada no lugar da pole oficial, porque a fonte só registra a classificação completa a partir dos anos 1990 (punições podem mudar a largada). O confronto na largada compara a posição de largada. Abandonos incluem quem não completou a prova e desclassificados. Pontos não são comparados, porque o sistema mudou várias vezes ao longo da história.</p>
 </main>
@@ -107,12 +112,83 @@ function mostrar(){
  const ma=A.length?A[0].a:0,mb=B.length?B[0].a:0;
  $("aviso").textContent=A.length&&B.length&&Math.abs(ma-mb)>8?"Atenção: os dois correram em épocas bem diferentes. Carros, regras e confiabilidade mudaram muito, então compare com cuidado.":"";
 }
+document.head.insertAdjacentHTML("beforeend","<style>.btn{font:inherit;cursor:pointer;background:var(--red);color:#fff;border:0;border-radius:999px;padding:10px 18px;font-weight:700;text-decoration:none;display:inline-block;margin:0 8px 8px 0}</style>");
+let LAST=null;
+const tema=()=>{const g=getComputedStyle(document.documentElement),v=n=>g.getPropertyValue(n).trim();return{ink:v("--ink")||"#15151e",mute:v("--mute")||"#6b6b7b",line:v("--line")||"#dcdce4"}};
+const CORES=["#e10600","#3b82f6"];
+const porAno=L=>{const m={};L.forEach(x=>{m[x.a]=(m[x.a]||0)+x.s});return m};
+function desenhar(cv,W,Ht,S,rot,t,k){
+ const c=cv.getContext("2d");cv.width=W;cv.height=Ht;c.clearRect(0,0,W,Ht);
+ const anos=[...new Set([...Object.keys(S[0]),...Object.keys(S[1])].map(Number))].sort((p,q)=>p-q);
+ if(!anos.length){c.fillStyle=t.mute;c.font=(16*k)+"px sans-serif";c.fillText("Sem dados no período.",20*k,40*k);return}
+ const mx=Math.max(10,...S.flatMap(s=>Object.values(s))),x0=50*k,x1=W-20*k,y0=20*k,y1=Ht-44*k,u=anos[anos.length-1]-anos[0];
+ const X=a=>u?x0+(a-anos[0])/u*(x1-x0):(x0+x1)/2,Y=v=>y1-v/mx*(y1-y0);
+ c.textAlign="left";c.font=(13*k)+"px sans-serif";c.lineWidth=1;
+ for(let i=0;i<=4;i++){const y=Y(mx*i/4);c.strokeStyle=t.line;c.beginPath();c.moveTo(x0,y);c.lineTo(x1,y);c.stroke();c.fillStyle=t.mute;c.fillText(Math.round(mx*i/4),6*k,y+4*k)}
+ const passo=Math.max(1,Math.ceil(anos.length/8));
+ anos.forEach((a,i)=>{if(i%passo===0){c.fillStyle=t.mute;c.fillText(a,X(a)-16*k,y1+20*k)}});
+ S.forEach((s,j)=>{
+  c.strokeStyle=CORES[j];c.fillStyle=CORES[j];c.lineWidth=3*k;let ab=false;c.beginPath();
+  anos.forEach(a=>{if(s[a]===undefined){ab=false;return}const x=X(a),y=Y(s[a]);if(ab)c.lineTo(x,y);else c.moveTo(x,y);ab=true});
+  c.stroke();
+  anos.forEach(a=>{if(s[a]!==undefined){c.beginPath();c.arc(X(a),Y(s[a]),3.5*k,0,7);c.fill()}});
+ });
+ c.font="600 "+(14*k)+"px sans-serif";let lx=x0;
+ rot.forEach((n,j)=>{c.fillStyle=CORES[j];c.fillRect(lx,Ht-18*k,12*k,12*k);c.fillStyle=t.ink;c.fillText(n,lx+18*k,Ht-7*k);lx+=c.measureText(n).width+50*k});
+}
+function extras(){
+ const ia=achar($("a").value),ib=achar($("b").value);
+ if(ia<0||ib<0){LAST=null;return}
+ const [A,B]=filtrar(ia,ib);
+ LAST={ia,ib,A,B,a:stats(ia,A),b:stats(ib,B),h:h2h(A,B),mesma:$("eq").checked};
+ const cv=$("gr"),d=window.devicePixelRatio||1;
+ desenhar(cv,Math.round(cv.clientWidth*d),Math.round(240*d),[porAno(A),porAno(B)],[H.pilotos[ia][1],H.pilotos[ib][1]],tema(),d);
+}
+const _mostrar=mostrar;
+mostrar=function(){_mostrar();extras()};
+function ajustar(c,txt,peso,tam,max){let s=tam;c.font=peso+" "+s+"px sans-serif";while(c.measureText(txt).width>max&&s>24){s-=2;c.font=peso+" "+s+"px sans-serif"}}
+function gerarCard(){
+ const d=LAST;if(!d){$("cardbox").textContent="Escolha dois pilotos primeiro.";return}
+ const W=1080,Ht=1350,cv=document.createElement("canvas");cv.width=W;cv.height=Ht;
+ const c=cv.getContext("2d"),na=H.pilotos[d.ia][1],nb=H.pilotos[d.ib][1];
+ c.fillStyle="#15151e";c.fillRect(0,0,W,Ht);c.fillStyle="#e10600";c.fillRect(0,0,W,14);
+ c.textAlign="center";c.fillStyle="#e10600";c.font="800 34px sans-serif";c.fillText("F1 BRASIL",W/2,84);
+ c.fillStyle="#ffffff";ajustar(c,na,"800",66,W-120);c.fillText(na,W/2,180);
+ c.fillStyle="#8b8b9e";c.font="600 30px sans-serif";c.fillText("contra",W/2,232);
+ c.fillStyle="#ffffff";ajustar(c,nb,"800",66,W-120);c.fillText(nb,W/2,310);
+ const de=+$("de").value||1950,ate=+$("ate").value||2100;
+ c.fillStyle="#8b8b9e";c.font="26px sans-serif";
+ c.fillText(d.mesma?"Só corridas na mesma equipe":(de<=1950&&ate>=2026?"Carreira completa":"Período: "+de+(ate>=2100?" em diante":"–"+ate)),W/2,362);
+ const L=linhas(d.a,d.b,d.mesma),idx=[1,2,3,4,5,7],rot=["Títulos","Vitórias","% de vitórias","Pódios","% de pódios","Pole → vitória"];
+ const R=idx.map((i,k)=>[rot[k],L[i][1],L[i][2],L[i][4]]).filter(x=>x[1]!==null&&x[2]!==null);
+ if(d.h.n)R.push(["Terminou à frente",d.h.fa,d.h.fb,0]);
+ R.forEach((x,k)=>{
+  const y=450+k*76;
+  c.fillStyle="#2a2a36";c.fillRect(60,y+26,W-120,2);
+  c.font="800 46px sans-serif";
+  c.fillStyle=x[1]>x[2]?"#ff3b30":"#ffffff";c.fillText(fmt(x[1],x[3]),270,y);
+  c.fillStyle=x[2]>x[1]?"#ff3b30":"#ffffff";c.fillText(fmt(x[2],x[3]),810,y);
+  c.fillStyle="#8b8b9e";c.font="600 24px sans-serif";c.fillText(x[0],W/2,y-8);
+ });
+ const tmp=document.createElement("canvas");
+ desenhar(tmp,960,300,[porAno(d.A),porAno(d.B)],[na,nb],{ink:"#ffffff",mute:"#8b8b9e",line:"#2a2a36"},1);
+ c.fillStyle="#8b8b9e";c.font="600 24px sans-serif";c.fillText("Pontos por temporada",W/2,982);
+ c.drawImage(tmp,60,1000);
+ c.font="24px sans-serif";c.fillText(location.host+"  ·  dados: Jolpica-F1",W/2,1330);
+ cv.toBlob(b=>{
+  const url=URL.createObjectURL(b),f=new File([b],"confronto-f1.png",{type:"image/png"});
+  const pode=navigator.canShare&&navigator.canShare({files:[f]});
+  $("cardbox").innerHTML='<img src="'+url+'" alt="Card do confronto" style="max-width:100%;width:420px;border-radius:12px;display:block;margin:12px 0"><p class="nota">Segure na imagem para salvar, ou use os botões.</p>'+(pode?'<button class="btn" id="cs">Compartilhar</button>':'')+'<a class="btn" href="'+url+'" download="confronto-f1.png">Baixar imagem</a>';
+  if(pode)$("cs").onclick=()=>navigator.share({files:[f],title:"Confronto de F1",text:na+" x "+nb+" no F1 Brasil: "+location.origin}).catch(()=>{});
+ },"image/png");
+}
+$("gcard").onclick=gerarCard;
 (async()=>{
  try{
   H=await lerDados("historico.json");
   const c=await lerDados("campeoes.json"),ano=new Date().getFullYear();
   c.MRData.StandingsTable.StandingsLists.forEach(l=>{if(+l.season<ano){const d=l.DriverStandings[0].Driver;CH[+l.season]=d.givenName+" "+d.familyName}});
-  H.corridas.forEach(x=>x[3].forEach(y=>{(E[y[0]]=E[y[0]]||[]).push({a:x[0],r:x[1],e:y[1],g:y[2],p:y[3]})}));
+  H.corridas.forEach(x=>x[3].forEach(y=>{(E[y[0]]=E[y[0]]||[]).push({a:x[0],r:x[1],e:y[1],g:y[2],p:y[3],s:y[4]})}));
   $("pl").innerHTML=H.pilotos.map(p=>p[1]).sort().map(n=>'<option value="'+n+'">').join("");
   $("pre").innerHTML=PRE.map((p,i)=>'<option value="'+i+'">'+p[0]+'</option>').join("");
   const nm=id=>{const p=H.pilotos.find(x=>x[0]===id);return p?p[1]:""};
